@@ -461,18 +461,19 @@ class RandomRotate(object):
             valid_points = rotated_points
             valid_colors = colors
 
-        # Round the coordinates to integers
-        rounded_points = torch.round(valid_points)
 
         # Remove duplicate points
-        unique_points, indices = torch.unique(rounded_points, dim=0, return_inverse=True)
-        _, first_occurrence_indices = indices.unique(return_inverse=True)
-        if indices.shape[0] > 1000:
-            # Apply rotation only if points are still present
-            sample['points'] = rounded_points[first_occurrence_indices]
-            sample['colors'] = valid_colors[first_occurrence_indices]
+        unique_points, unique_colors = ME.utils.sparse_quantize(
+                coordinates=valid_points,
+                features=valid_colors,
+                quantization_size=1.0
+            )
+        # Always update points and colors (assuming indices.shape[0] check was unnecessary)
+        sample['points'] = unique_points
+        sample['colors'] = unique_colors
 
         return sample
+    
 
     @staticmethod
     def rotation_matrix_3d(phi, theta):

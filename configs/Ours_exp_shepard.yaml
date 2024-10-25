@@ -1,5 +1,5 @@
 ## General
-experiment_name: "Ours"
+experiment_name: "Final_exp_shepard"
 results_path : "./results"
 
 # Model
@@ -23,7 +23,7 @@ model:
     source_condition: True
 
 ## Data
-data_path: "./data/datasets/jpeg_128"
+data_path: "./data/datasets/full_128"
 min_points_train: 300
 min_points_test: 0
 transforms:
@@ -37,21 +37,21 @@ transforms:
 #Q_Map
 q_map:
   lambda_A_min: 0
-  lambda_A_max: 64000
-  lambda_G_min: 2
-  lambda_G_max: 2000
+  lambda_A_max: 51200
+  lambda_G_min: 0
+  lambda_G_max: 200
   mode: "exponential"
 
 ## Training
-device: "0"
-epochs: 200
+device: "1"
+epochs: 300
 batch_size: 8
 virtual_batches: false
 model_learning_rate: 0.0001
 bottleneck_learning_rate: 0.001
 optimizer: "Adam"
 scheduler_step_size: 150
-scheduler_gamma: 0.5
+scheduler_gamma: 0.1
 clip_grad_norm: 1.0
 
 ## Loss:
@@ -61,8 +61,10 @@ loss:
     alpha: 0.5
     gamma: 2.0
   ColorLoss:
-    type: "ColorLoss"
+    type: "ShepardsLoss"
     loss: "L2"
+    window_size: 7
+    p: 8
   bpp-y:
     type: "BPPLoss"
     key: "y"

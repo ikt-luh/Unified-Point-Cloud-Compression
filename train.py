@@ -151,6 +151,7 @@ class Training():
 
         
     def train(self):
+        path = os.path.join(self.results_directory, "weights.pt")
         for epoch in range(self.epoch, self.config["epochs"]):
             # Training
             self.train_epoch(epoch)
@@ -161,10 +162,9 @@ class Training():
             self.model_scheduler.step()
             self.model.update()
             self.save_checkpoint(epoch+1)
+            torch.save(self.model.state_dict(), path)
 
         # Save model after training
-        path = os.path.join(self.results_directory,
-                            "weights.pt")
         self.model.update()
         torch.save(self.model.state_dict(), path)
 
@@ -185,6 +185,15 @@ class Training():
             coords, feats = ME.utils.collation.sparse_collate(data["points"], 
                                                               data["colors"], 
                                                               device=self.device)
+
+
+            # Quantize coordinates to remove duplicates
+            coords, feats = ME.utils.sparse_quantize(
+                coordinates=coords,
+                features=feats,
+                quantization_size=1.0
+            )
+
             # Input data
             input = ME.SparseTensor(features=feats,
                                     coordinates=coords,
@@ -248,13 +257,14 @@ class Training():
                                                 device=source.device)
 
                         # Compression
-                        strings, shapes, k, coordinates = self.model.compress(source, Q_map)
+                        strings, shapes, k, coordinates, q_vals = self.model.compress(source, Q_map)
 
                         # Run decompression
                         reconstruction = self.model.decompress(coordinates=coordinates, 
                                                                 strings=strings, 
                                                                 shape=shapes,
-                                                                k=k)
+                                                                k=k,
+                                                                q_vals=q_vals)
                     
                         # Rebuild point clouds
                         source_pc = utils.get_o3d_pointcloud(source)

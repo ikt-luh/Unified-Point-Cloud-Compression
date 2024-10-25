@@ -43,6 +43,7 @@ class AnalysisTransform(nn.Module):
         # Model
         self.pre_conv = nn.Sequential(
             ME.MinkowskiConvolution(in_channels=C_in, out_channels=N1, kernel_size=3, stride=1, bias=True, dimension=3),
+            #ME.MinkowskiConvolution(in_channels=C_in, out_channels=N1, kernel_size=7, stride=1, bias=True, dimension=3),
             ME.MinkowskiReLU(inplace=False),
         )
 
@@ -168,6 +169,7 @@ class SparseSynthesisTransform(torch.nn.Module):
                 ME.MinkowskiConvolution(in_channels=N1, out_channels=N1//2, kernel_size=3, stride=1, bias=True, dimension=3),
                 ME.MinkowskiReLU(inplace=False),
                 ME.MinkowskiConvolution(in_channels=N1//2, out_channels=2, kernel_size=3, stride=1, bias=True, dimension=3),
+                ME.MinkowskiSigmoid()
             )
         else: 
             self.cond_conv = None
@@ -259,7 +261,7 @@ class SparseSynthesisTransform(torch.nn.Module):
             Q_plus = self.cond_conv(x)
             Q = ME.SparseTensor(
                 coordinates=Q.C,
-                features=Q.F + Q_plus.features_at_coordinates(Q.C.float()),
+                features=Q.F * Q_plus.features_at_coordinates(Q.C.float()),
                 tensor_stride=Q.tensor_stride,
                 device=Q.device
             )

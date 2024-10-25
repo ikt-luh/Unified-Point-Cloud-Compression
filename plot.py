@@ -21,31 +21,32 @@ bottom = .16
 left = .22
 right = .97
 runs = {
-    "L2" : "Ours",
+    "L2" : "Ours_save",
     "YOGA" : "YOGA",
     "G-PCC" : "G-PCC",
     "V-PCC" : "V-PCC",
-    #"L2_log" : "Ablation_L2_200epochs_SC_log_q_map",
+
+    "L2_log" : "Ours_quad",
 }
 
 bd_points = {
-    "L2" : [(0.05, 0.1), (0.1, 0.2), (0.2, 0.4), (0.4, 0.8)],
-    "L2_log" : [(0.05, 0.1), (0.1, 0.2), (0.2, 0.4), (0.4, 0.8)],
+    "L2" : [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3), (0.4, 0.5), (0.5, 0.5), (0.7, 0.7), (0.8, 0.8), (0.9, 0.9)],
+    "L2_log" : [(0.1, 0.2), (0.4, 0.4), (0.5, 0.5), (0.7, 0.9)],
     "G-PCC" : [(0.125, 51), (0.25, 46), (0.5, 40), (0.75, 34)], #last: (0.9375, 22) 
     "V-PCC" : [(32,42), (28, 37), (24, 32), (20, 27), (16, 22)],
 }
 pareto_ranges = {
     "longdress":{
-        "bpp": [0.0, 1], "pcqm": [0.985, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70],
+        "bpp": [0.0, 2.0], "pcqm": [0.96, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70],
     },
     "soldier":{
-        "bpp": [0.0, 0.9], "pcqm": [0.985, 0.9975], "sym_y_psnr": [22, 35], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
+        "bpp": [0.0, 2.0], "pcqm": [0.96, 0.9975], "sym_y_psnr": [22, 35], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
     },
     "loot":{
-        "bpp": [0.0, 0.8], "pcqm": [0.985, 0.9975], "sym_y_psnr": [24, 36], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
+        "bpp": [0.0, 2.0], "pcqm": [0.96, 0.9975], "sym_y_psnr": [24, 36], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
     },
     "redandblack":{
-        "bpp": [0.0, 0.8], "pcqm": [0.985, 0.9975], "sym_y_psnr": [24, 32], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
+        "bpp": [0.0, 2.0], "pcqm": [0.96, 0.9975], "sym_y_psnr": [24, 32], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
     },
     "sarah9":{
         "bpp": [0.0, 0.9975], "pcqm": [0.985, 0.9975], "sym_y_psnr": [0.98, 1.00], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [0.98, 1.00],
@@ -75,7 +76,7 @@ run_colors = {
     "V-PCC" : style.colors[1],
     "YOGA" : style.colors[4],
 
-    "L2_log" : style.colors[1],
+    "L2_log" : style.colors[5],
     "SSIM" : style.colors[1],
 }
 linestyles = {
@@ -84,7 +85,7 @@ linestyles = {
     "V-PCC" : style.linestyles[1],
     "YOGA" : style.linestyles[4],
 
-    "L2_log" : style.linestyles[1],
+    "L2_log" : style.linestyles[0],
     "SSIM" : style.linestyles[1],
 }
 markers = {
@@ -98,7 +99,7 @@ markers = {
 }
 labels = {
     "L2" : "Ours",
-    "L2_log" : "L2 log",
+    "L2_log" : "Ours_quad",
     "SSIM" : "Ours ($SSIM$)",
     "G-PCC" : "G-PCC",# (tmc13 v23)",
     "V-PCC" : "V-PCC", #(tmc2 v24)",
@@ -111,7 +112,7 @@ def plot_experiments():
     data = load_csvs()
 
     plot_rd_figs_all(data)
-    compute_bd_deltas(data)
+    #compute_bd_deltas(data)
     
     # Timing
     compute_times(data)
@@ -405,26 +406,24 @@ def compute_bd_deltas(dataframes):
 
 
 def get_pareto_df(dataframe):
-    pareto_dataframe = pd.DataFrame()
+    pareto_dataframe = []
     for sequence in dataframe["sequence"].unique():
-        df = dataframe[dataframe["sequence"]== sequence]
-        df = df.sort_values(by=["bpp"])
+        df = dataframe[dataframe["sequence"]== sequence].sort_values(by=["bpp"])
 
         pareto_front = []
-        pareto_pcqm = 0
+        max_pcqm = 0.0
 
         # Iterate through the sorted DataFrame
         for index, row in df.iterrows():
             pcqm = row['pcqm']
-            #bpp = row['bpp']
     
-            if pcqm >= pareto_pcqm:
-                pareto_pcqm = pcqm
+            if pcqm >= max_pcqm:
+                max_pcqm = pcqm
                 pareto_front.append(index)
 
         # Create a new DataFrame for the Pareto front
-        pareto_df = df.loc[pareto_front]
-        pareto_dataframe = pd.concat([pareto_dataframe, pareto_df])
+        pareto_dataframe.append(df.loc[pareto_front])
+    pareto_dataframe = pd.concat(pareto_dataframe, ignore_index=True)
     return pareto_dataframe
 
 def load_csvs():

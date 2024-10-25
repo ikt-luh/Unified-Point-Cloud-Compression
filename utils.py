@@ -415,7 +415,7 @@ def remove_gpcc_header(path, gpcc=True):
 
 
 
-def compress_model_ours(experiment, model, data, q_a, q_g, device, base_path):
+def compress_model_ours(experiment, model, data, q_a, q_g, block_size, device, base_path):
     """
     Compress a point cloud using our model
     """
@@ -449,7 +449,7 @@ def compress_model_ours(experiment, model, data, q_a, q_g, device, base_path):
     t0 = time.time()
 
     #strings, shapes, k, coordinates = model.compress(source, Q_map)
-    model.compress(source, Q_map, path=bin_path)
+    model.compress(source, Q_map, block_size=block_size, path=bin_path)
 
     torch.cuda.synchronize()
     t_compress = time.time() - t0
@@ -617,3 +617,19 @@ def compress_related(experiment, data, q_a, q_g, base_path):
     source = torch.concat([points, colors], dim=2)[0]
     source_pc = get_o3d_pointcloud(source)
     return source_pc, rec_pc, bpp, t_compress, t_decompress
+
+
+def overlapping_mask(tensor1, tensor2):
+    """
+    Get the overlapping coordinates of two tensors
+    """
+    # Define Scaling Factors
+    scaling_factors = torch.tensor([1, 1e2, 1e8, 1e12], dtype=torch.int64, device=tensor1.C.device)
+
+    # Transform to unique indices
+    tensor1_flat = (tensor1.C.to(torch.int64) * scaling_factors).sum(dim=1)
+    tensor2_flat = (tensor2.C.to(torch.int64) * scaling_factors).sum(dim=1)
+
+    # Mask
+    mask = torch.isin(tensor1_flat, tensor2_flat)
+    return mask

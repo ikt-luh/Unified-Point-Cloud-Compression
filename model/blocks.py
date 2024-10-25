@@ -22,11 +22,12 @@ class ScaledBlock(torch.nn.Module):
             ME.MinkowskiConvolution(in_channels=N, out_channels=N, kernel_size=3, stride=1, bias=True, dimension=3),
             ME.MinkowskiReLU(inplace=False),
             ME.MinkowskiConvolution(in_channels=N, out_channels=N, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
         )
         self.gdn = MinkowskiGDN(N, inverse=(not self.encode))
 
     def forward(self, x, condition):
+        """
+        """
         x_res = ME.SparseTensor(coordinates=x.C,
                                 features=x.F.clone(),
                                 device=x.device,
@@ -50,6 +51,8 @@ class ScaledBlock(torch.nn.Module):
                                 features=x.F + x_res.features_at_coordinates(x.C.float()),
                                 device=x.device,
                                 tensor_stride=x.tensor_stride)
+        """
+        """
         return x
 
 
@@ -72,7 +75,52 @@ class ConvBlock(torch.nn.Module):
         x = self.conv_2(x)
         return x
 
+class ScaledBlock2(torch.nn.Module):
+    def __init__(self, N, encode=True, scale=True):
+        super().__init__()
+        self.encode = encode
+        self.scale = scale
 
+        self.conv_1 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N, out_channels=N, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiReLU(inplace=False),
+            ME.MinkowskiConvolution(in_channels=N, out_channels=N, kernel_size=3, stride=1, bias=True, dimension=3),
+        )
+        self.conv_2 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N, out_channels=N, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiReLU(inplace=False),
+            ME.MinkowskiConvolution(in_channels=N, out_channels=N, kernel_size=3, stride=1, bias=True, dimension=3),
+        )
+        self.conv_3 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N, out_channels=N, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiReLU(inplace=False)
+        )
+
+    def forward(self, x, condition):
+        x_res = ME.SparseTensor(coordinates=x.C,
+                                features=x.F.clone(),
+                                device=x.device,
+                                tensor_stride=x.tensor_stride)
+        x = self.conv_1(x)
+
+        # Scale and shift
+        beta, gamma = condition.features_at_coordinates(x.C.float()).chunk(2, dim=1)
+
+        if self.scale:
+            feats = x.F * beta + gamma
+            #feats = x.F * F.softplus(beta) + gamma
+         
+
+        x = ME.SparseTensor(coordinates=x.C, 
+                            features=feats, 
+                            device=x.device, 
+                            tensor_stride=x.tensor_stride)
+
+        x = self.conv_2(x)
+        x = ME.SparseTensor(coordinates=x.C,
+                                features=x.F + x_res.features_at_coordinates(x.C.float()),
+                                device=x.device,
+                                tensor_stride=x.tensor_stride)
 
 
 class GenerativeUpBlock(torch.nn.Module):

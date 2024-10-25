@@ -1,5 +1,7 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
+import utils
 import math
 import MinkowskiEngine as ME
 
@@ -27,6 +29,8 @@ class Loss():
                     self.losses[id] = BPPLoss(setting)
                 case "ColorLoss":
                     self.losses[id] = ColorLoss(setting)
+                case "ShepardsLoss":
+                    self.losses[id] = ShepardsLoss(setting)
                 case "ColorSSIM":
                     self.losses[id] = ColorSSIM(setting)
                 case "FocalLoss":
@@ -100,11 +104,18 @@ class ColorLoss():
         prediction = pred["prediction"]
         q_map = pred["q_map"]
 
-        pred_colors = prediction.features_at_coordinates(gt.C.float())
-        gt_colors = gt.F
+        scaling_factors = torch.tensor([1, 1e6, 1e12, 1e18], dtype=torch.int64, device=gt.C.device)
+        gt_flat = (gt.C.to(torch.int64) * scaling_factors).sum(dim=1)
+        pred_flat = (prediction.C.to(torch.int64) * scaling_factors).sum(dim=1)
+
+        # Identify non-overlapping coordinates
+        overlapping_mask = torch.isin(gt_flat, pred_flat)
+
+        pred_colors = prediction.features_at_coordinates(gt.C[overlapping_mask].float())
+        gt_colors = gt.F[overlapping_mask]
 
         color_loss = self.loss_func(gt_colors, pred_colors) 
-        color_loss *= q_map.features_at_coordinates(gt.C.float())[:, 1].unsqueeze(1)
+        color_loss *= q_map.features_at_coordinates(gt.C[overlapping_mask].float())[:, 1].unsqueeze(1)
 
         return color_loss.mean()
     
@@ -193,6 +204,148 @@ class Multiscale_FocalLoss():
             loss += (focal_loss * q_avgs.features_at_coordinates(prediction.C.float())[:, 0]).mean()
 
         return loss
+
+
+
+class ShepardsLoss():
+    """
+    Shepard's Loss, using L2/L1 color loss on ground truth voxel locations.
+    """
+    def __init__(self, config):
+        self.identifier = config["id"]
+
+        # Choose loss function based on configuration
+        if config["loss"] == "L1":
+            self.loss_func = torch.nn.L1Loss(reduction="none")
+        elif config["loss"] == "L2":
+            self.loss_func = torch.nn.MSELoss(reduction="none")
+
+        self.p = config["p"]
+        self.window_size = config["window_size"]
+
+        # Create 3D window for convolution
+        self.window = self.create_window_3D(self.window_size)
+
+        # Define Minkowski convolutions
+        self.conv_sum = self._init_minkowski_conv(4, self.window_size, self.window)
+        self.conv_sum_q = self._init_minkowski_conv(3, self.window_size, self.window)
+
+    def _init_minkowski_conv(self, in_channels, kernel_size, kernel):
+        """
+        Initialize a Minkowski Channelwise Convolution and set its kernel.
+        """
+        conv = ME.MinkowskiChannelwiseConvolution(in_channels=in_channels, kernel_size=kernel_size, stride=1, dimension=3)
+        conv.kernel = torch.nn.Parameter(kernel)
+        conv.kernel.requires_grad = False
+        return conv
+
+
+    def create_window_3D(self, window_size):
+        """
+        Compute a 3D window shaped like a ball with inverse distance weighting.
+
+        Parameters
+        ----------
+        window_size: int
+            Size of the window (must be odd for a symmetric ball)
+
+        Returns
+        ----------
+        window: torch.tensor
+            3D window of shape (window_size**3) with inverse distance weighting
+        """
+        radius = window_size // 2
+        window = torch.zeros((window_size, window_size, window_size))
+
+        # Create 3D grid
+        z, y, x = torch.meshgrid(
+            torch.arange(window_size) - radius,
+            torch.arange(window_size) - radius,
+            torch.arange(window_size) - radius
+        )
+
+        distance = torch.sqrt(x**2 + y**2 + z**2)
+        window = 1 / (distance ** self.p + 1e-5)
+        window[distance > radius] = 0
+
+        #window = window / window.sum()
+        window = window.view(-1, 1)
+        return window
+
+    def __call__(self, gt, pred):
+        """
+        Forward pass for Shepard's loss calculation.
+        """
+        self.conv_sum.to(gt.C.device)
+        self.conv_sum_q.to(gt.C.device)
+
+        prediction = pred["prediction"]
+        q_map = pred["q_map"]
+
+        try:
+            gt_on_pred = self.interpolate_gt_to_pred(gt, prediction)
+            q_map_on_pred = self.interpolate_gt_to_pred(q_map, prediction, interpolate_q_map=True)
+        except RuntimeError:
+            print("Error in interpolation")
+            gt_on_pred = gt.features_at_coordinates(gt.C.float())
+            q_map_on_pred = gt.features_at_coordinates(gt.C.float())
+
+        valid_mask = (~torch.isnan(gt_on_pred.F)).all(dim=1)
+        color_loss = self.loss_func(gt_on_pred.F[valid_mask], prediction.F[valid_mask]) * q_map_on_pred.F[valid_mask, 1].unsqueeze(1)
+        
+        return color_loss.mean()
+
+
+    def interpolate_gt_to_pred(self, gt, prediction, interpolate_q_map=False):
+        """
+        Interpolate ground truth values to predicted coordinates using Minkowski convolution.
+        """      
+        N = 3 if interpolate_q_map else 4
+
+        overlapping_mask = utils.overlapping_mask(prediction, gt)
+
+        # Concatenate gt and non-overlapping prediction coordinates
+        combined_coords = torch.cat([gt.C, prediction.C[~overlapping_mask].clone()])
+        combined_tensor = ME.SparseTensor(
+            coordinates=combined_coords,
+            features=torch.ones(combined_coords.shape[0], N, device=gt.C.device),
+            device=gt.C.device
+        )
+
+        overlapping_mask_comb = utils.overlapping_mask(combined_tensor, gt)
+
+        # Update the features for overlapping and non-overlapping points
+        combined_tensor.F[~overlapping_mask_comb] = 0.0
+        combined_tensor.F[overlapping_mask_comb, 1] = 1.0
+        combined_tensor.F[overlapping_mask_comb, 1:] = gt.features_at_coordinates(combined_tensor.C[overlapping_mask_comb].float())
+
+        if interpolate_q_map:
+            gt_interpolated = self.conv_sum_q(combined_tensor)
+        else:
+            gt_interpolated = self.conv_sum(combined_tensor)
+
+        # Interpolate raw features from the ground truth at the non-overlapping predicted locations
+        raw_features = gt_interpolated.features_at_coordinates(prediction.C[~overlapping_mask].float())[:, 1:] / \
+                       gt_interpolated.features_at_coordinates(prediction.C[~overlapping_mask].float())[:, 0].unsqueeze(1)
+
+        # Create a tensor for ground truth on predicted coordinates
+        gt_on_pred = ME.SparseTensor(
+            coordinates=prediction.C.clone(),
+            features=torch.zeros((prediction.F.shape[0], N-1), device=gt.C.device),
+            device=prediction.C.device
+        )
+
+        # Set features for overlapping points and interpolate for non-overlapping points
+        overlapping_mask2 = utils.overlapping_mask(gt_on_pred, gt)
+        gt_on_pred.F[overlapping_mask2] = gt.features_at_coordinates(gt_on_pred.C[overlapping_mask2].float())
+        gt_on_pred.F[~overlapping_mask2] = raw_features
+
+        return gt_on_pred
+
+
+
+
+
 
 class ColorSSIM():
     def __init__(self, config):

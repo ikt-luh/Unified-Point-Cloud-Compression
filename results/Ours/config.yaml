@@ -1,8 +1,8 @@
 batch_size: 8
 bottleneck_learning_rate: 0.001
 clip_grad_norm: 1.0
-data_path: ./data/datasets/full_128
-device: '3'
+data_path: ./data/datasets/jpeg_128
+device: '0'
 epochs: 200
 experiment_name: Ours
 loss:
@@ -44,14 +44,14 @@ model:
 model_learning_rate: 0.0001
 optimizer: Adam
 q_map:
-  lambda_A_max: 6400
+  lambda_A_max: 64000
   lambda_A_min: 0
-  lambda_G_max: 200
-  lambda_G_min: 0
-  mode: quadratic
+  lambda_G_max: 2000
+  lambda_G_min: 2
+  mode: exponential
 results_path: ./results
-scheduler_gamma: 0.1
-scheduler_step_size: 50
+scheduler_gamma: 0.5
+scheduler_step_size: 150
 transforms:
   train:
     1_ColorJitter:

@@ -10,6 +10,7 @@ import copy
 from torch.utils.data import DataLoader
 import MinkowskiEngine as ME
 import subprocess
+from plyfile import PlyData
 
 import utils
 from model.model import ColorModel
@@ -25,24 +26,58 @@ norm = Normalize(vmin=0.0, vmax=10**(-2))
 base_path = "./results"
 data_path = "./data/datasets/full_128" 
 ref_paths = {
-     "soldier" : "../AttAndColors/data/datasets/raw/soldier/soldier/Ply/soldier_vox10_0690.ply",
-    "longdress" : "../AttAndColors/data/datasets/raw/longdress/longdress/Ply/longdress_vox10_1300.ply",
-     "loot" : "../AttAndColors/data/datasets/raw/loot/loot/Ply/loot_vox10_1200.ply",
-     "redandblack" : "../AttAndColors/data/datasets/raw/redandblack/redandblack/Ply/redandblack_vox10_1550.ply",
-     "phil9" : "../AttAndColors/data/datasets/raw/phil9/phil9/ply/frame0000.ply",
-     "sarah9" : "../AttAndColors/data/datasets/raw/sarah9/sarah9/ply/frame0000.ply",
-     "andrew9" : "../AttAndColors/data/datasets/raw/andrew9/andrew9/ply/frame0000.ply",
-     "david9" : "../AttAndColors/data/datasets/raw/david9/david9/ply/frame0000.ply",
+     #"thaidancer" : "./data/datasets/raw/jpeg_testset/Thaidancer_viewdep_vox12.ply",
+     #"bouquet" : "./data/datasets/raw/jpeg_testset/RWT130Bouquet.ply",
+     #"stmichael" : "./data/datasets/raw/jpeg_testset/RWT70StMichael.ply",
+     #"soldier" : "./data/datasets/raw/jpeg_testset/soldier_vox10_0690.ply",
+
+     #"boxer" : "./data/datasets/raw/jpeg_testset/boxer_viewdep_vox12.ply",
+     "House" : "./data/datasets/raw/jpeg_testset/House_without_roof_00057_vox12.ply",
+     "CITISUP" : "./data/datasets/raw/jpeg_testset/CITIUSP_vox13.ply",
+     "Facade" : "./data/datasets/raw/jpeg_testset/Facade_00009_vox12.ply",
+
+     "EPFL" : "./data/datasets/raw/jpeg_testset/EPFL_vox13.ply",
+     "Arco" : "./data/datasets/raw/jpeg_testset/Arco_Valentino_Dense_vox12.ply",
+     "shiva" : "./data/datasets/raw/jpeg_testset/Shiva_00035_vox12.ply",
+     "Unicorn" : "./data/datasets/raw/jpeg_testset/ULB_Unicorn_vox13_n.ply",
      }
 resolutions ={
-    "longdress" : 1023, "soldier" : 1023, "loot" : 1023, "redandblack" : 1023,
-     "phil9" : 511, "sarah9" : 511, "andrew9" : 511, "david9" : 511,
+     "soldier" : 1023, 
+     "boxer" : 4095,
+     "thaidancer" : 4095,
+     "bouquet" : 1023,
+
+     "stmichael" : 1023,
+     "CITISUP" : 8191,
+     "EPFL" : 8191,
+     "Facade" : 4095,
+
+     "House" : 4095,
+     "shiva" : 4095,
+     "Unicorn" : 8191,
+     "Arco" : 4095,
+}
+block_sizes ={
+     "soldier" : 1024, 
+     "boxer" : 512,
+     "thaidancer" : 512,
+     "bouquet" : 512,
+
+     "stmichael" : 1024,
+     "CITISUP" : 512,
+     "EPFL" : 512,
+     "Facade" : 512,
+
+     "House" : 512,
+     "shiva" : 1024,
+     "Unicorn" : 1024,
+     "Arco" : 1024,
 }
 
 
-device_id = 2
+device_id = 3
 experiments = [
-    "Ours_quad",
+    "Ours",
     #"V-PCC",
     #"G-PCC",
     ]
@@ -72,6 +107,8 @@ def run_testset(experiments):
             #q_gs = np.arange(6) * 0.2
             q_as = np.arange(21) * 0.05
             q_gs = np.arange(21) * 0.05
+            q_as = [0.5]
+            q_gs = [0.5]
 
             weight_path = os.path.join(base_path, experiment, "weights.pt")
             config_path = os.path.join(base_path, experiment, "config.yaml")
@@ -94,12 +131,44 @@ def run_testset(experiments):
         
 
         with torch.no_grad():
-            for s, data in enumerate(test_loader):
+            for s, sequence in enumerate(ref_paths.keys()):
+                ref_path = ref_paths[sequence]
+                """
+                with open(ref_path, "rb") as f:
+                    plydata = PlyData.read(f)
+
+                # Load ply and convert to points array
+                points = np.vstack([plydata['vertex'].data['x'], 
+                                    plydata['vertex'].data['y'], 
+                                    plydata['vertex'].data['z']]).T
+                colors = np.vstack([plydata['vertex'].data['red'], 
+                                    plydata['vertex'].data['green'], 
+                                    plydata['vertex'].data['blue']]).T / 255.0
+                #cd = o3d.io.read_point_cloud(ref_path, format="ply")
+                points = torch.from_numpy(points).unsqueeze(0).float()
+                colors = torch.from_numpy(colors).unsqueeze(0).float()
+                data = { "src" : {"points" : points, "colors": colors}}
+                """
+
+                pcd = o3d.io.read_point_cloud(ref_path)
+
+                # Step 2: Convert Open3D point cloud data to NumPy arrays
+                points = np.asarray(pcd.points)  # Extract points (N, 3)
+                colors = np.asarray(pcd.colors)  # Extract colors (N, 3)
+
+                # Step 3: Convert NumPy arrays to PyTorch tensors
+                points = torch.from_numpy(points).unsqueeze(0).float()  # Shape (1, N, 3)
+                colors = torch.from_numpy(colors).unsqueeze(0).float()  # Shape (1, N, 3)
+
+                # Step 4: Prepare the data in the desired format
+                data = {"src": {"points": points, "colors": colors}}
                 for j, q_g in enumerate(q_gs):
                     for i, q_a in enumerate(q_as):
                         # Get info
                         t0 = time.time()
-                        sequence = data["cubes"][0]["sequence"][0]
+
+                        block_size = block_sizes[sequence]
+
 
                         # Run model
                         if experiment not in related_work:
@@ -108,7 +177,7 @@ def run_testset(experiments):
                                                                                              data,
                                                                                              q_a, 
                                                                                              q_g, 
-                                                                                             1024,
+                                                                                             block_size,
                                                                                              device,
                                                                                              base_path)
                         else:
@@ -120,21 +189,23 @@ def run_testset(experiments):
 
                         tmp_path = os.path.join(base_path,
                                                 experiment)
-                        results = utils.pc_metrics(ref_paths[data["cubes"][0]["sequence"][0]], 
+                        """
+                        results = utils.pc_metrics(ref_path, 
                                                      rec_pc, 
                                                      "dependencies/mpeg-pcc-tmc2/bin/PccAppMetrics",
                                                      tmp_path,
                                                      resolution=resolutions[sequence])
-
-                        results["pcqm"] = utils.pcqm(ref_paths[data["cubes"][0]["sequence"][0]], 
+                        """
+                        results = {}
+                        results["pcqm"] = utils.pcqm(ref_path, 
                                                      rec_pc, 
                                                      "dependencies/PCQM/build",
                                                      tmp_path)
 
                         # Save results
                         results["bpp"] = bpp
-                        results["sequence"] = data["cubes"][0]["sequence"][0]
-                        results["frameIdx"] = data["cubes"][0]["frameIdx"][0].item()
+                        results["sequence"] = sequence
+                        results["frameIdx"] = 0 #TODO
                         results["t_compress"] = t_compress
                         results["t_decompress"] = t_decompress
                         results["q_a"] = q_a
@@ -145,7 +216,7 @@ def run_testset(experiments):
                         t1 = time.time() - t0
                         total = len(test_loader) * len(q_as) * len(q_gs)
                         done = (s * len(q_as) * len(q_gs)) + (i * len(q_gs)) + j + 1
-                        print("[{}/{}] Experiment: {} | Sequence: {} @ q_a:{:.2f} q_g:{:.2f} | {:2f}s | PCQM:{:4f} bpp:{:2f}".format(done,
+                        print("[{}/{}] Experiment: {} | Sequence: {} @ q_a:{:.2f} q_g:{:.2f} | {:2f}s | PCQM:{:4f} bpp:{:2f} t_comp:{:2f}s ".format(done,
                                                                                                                                      total,
                                                                                                                                      experiment,
                                                                                                                                sequence, 
@@ -153,9 +224,10 @@ def run_testset(experiments):
                                                                                                                                q_g,  
                                                                                                                                t1,
                                                                                                                                results["pcqm"],
-                                                                                                                               results["bpp"]))
+                                                                                                                               results["bpp"],
+                                                                                                                               t_compress + t_decompress))
                         # Renders of the pointcloud
-                        point_size = 1.0 if data["cubes"][0]["sequence"][0] in ["longdress", "soldier", "loot", "longdress"] else 2.0
+                        point_size = 1.0 if sequence in ["longdress", "soldier", "loot", "longdress"] else 2.0
                         path = os.path.join(base_path,
                                             experiment, 
                                             "renders_test",

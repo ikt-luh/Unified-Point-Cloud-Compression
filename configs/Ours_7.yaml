@@ -1,5 +1,5 @@
 ## General
-experiment_name: "Ours"
+experiment_name: "Ours_7"
 results_path : "./results"
 
 # Model
@@ -43,14 +43,14 @@ q_map:
   mode: "exponential"
 
 ## Training
-device: "0"
+device: "3"
 epochs: 200
 batch_size: 8
 virtual_batches: false
 model_learning_rate: 0.0001
 bottleneck_learning_rate: 0.001
 optimizer: "Adam"
-scheduler_step_size: 150
+scheduler_step_size: 80
 scheduler_gamma: 0.5
 clip_grad_norm: 1.0
 

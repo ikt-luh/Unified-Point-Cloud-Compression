@@ -216,14 +216,14 @@ class Q_Map(object):
         """
         coordinates = geometry.C[mask]
         features = geometry.F[mask]
-        choice = random.choice(range(2))
+        choice = random.choice(range(1))
+        #choice = random.choice(range(2))
 
         if choice == 0:
-            q_feats = self.gradient(coordinates)
-        elif choice == 1:
             q_feats = self.uniform(coordinates)
-        elif choice == 3:
-            q_feats = self.variance(coordinates, features, i)
+        elif choice == 1:
+            q_feats = self.gradient(coordinates)
+        
 
 
         # Replace in q_map

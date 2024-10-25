@@ -1,29 +1,35 @@
 ## General
-experiment_name: "Ours"
+experiment_name: "Ours_uvg_model2"
 results_path : "./results"
 
 # Model
 model:
   entropy_model: 
     type: "MeanScaleHyperprior_map" 
-    C_bottleneck: 128
-    C_hyper_bottleneck: 128
+    C_bottleneck: 196
+    C_hyper_bottleneck: 196
     C_Q: 2
   g_a: 
     C_in: 4
-    N1: 64
-    N2: 128
+    N1: 32
+    N2: 64
     N3: 128
-    source_condition: True
+    N4: 196
+    N2_q: 4
+    N3_q: 8
+    N4_q: 16
   g_s:
     C_out: 3
-    N1: 128
-    N2: 128
-    N3: 64
-    source_condition: True
+    N1: 32
+    N2: 63
+    N3: 128
+    N4: 196
+    N2_q: 4
+    N3_q: 8
+    N4_q: 16
 
 ## Data
-data_path: "./data/datasets/jpeg_128"
+data_path: "./data/datasets/full_128"
 min_points_train: 300
 min_points_test: 0
 transforms:
@@ -37,8 +43,8 @@ transforms:
 #Q_Map
 q_map:
   lambda_A_min: 0
-  lambda_A_max: 64000
-  lambda_G_min: 2
+  lambda_A_max: 128000
+  lambda_G_min: 0
   lambda_G_max: 2000
   mode: "exponential"
 
