@@ -40,9 +40,9 @@ resolutions ={
 }
 
 
-device_id = 2
+device_id = 3
 experiments = [
-    "Ours_quad",
+    "Balle_MOO_5",
     #"V-PCC",
     #"G-PCC",
     ]
@@ -68,10 +68,10 @@ def run_testset(experiments):
 
         # Set model and QPs
         if experiment not in related_work:
-            #q_as = np.arange(6) * 0.2
-            #q_gs = np.arange(6) * 0.2
-            q_as = np.arange(21) * 0.05
-            q_gs = np.arange(21) * 0.05
+            q_as = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+            q_gs = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+            #q_as = np.arange(21) * 0.05
+            #q_gs = np.arange(21) * 0.05
 
             weight_path = os.path.join(base_path, experiment, "weights.pt")
             config_path = os.path.join(base_path, experiment, "config.yaml")

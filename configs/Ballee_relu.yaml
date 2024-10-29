@@ -1,5 +1,5 @@
 ## General
-experiment_name: "Balle_MOO_5"
+experiment_name: "Balle_MOO_5_relu"
 results_path : "./results"
 
 # Model
@@ -43,8 +43,8 @@ q_map:
   mode: "quadratic"
 
 ## Training
-device: "1"
-epochs: 300
+device: "0"
+epochs: 200
 batch_size: 8
 virtual_batches: false
 model_learning_rate: 0.0001

@@ -1,5 +1,5 @@
 ## General
-experiment_name: "Balle_MOO_5"
+experiment_name: "Balle_scaled_invertible"
 results_path : "./results"
 
 # Model
@@ -37,13 +37,13 @@ transforms:
 #Q_Map
 q_map:
   lambda_A_min: 0
-  lambda_A_max: 12800
+  lambda_A_max: 25600
   lambda_G_min: 2
-  lambda_G_max: 200
+  lambda_G_max: 400
   mode: "quadratic"
 
 ## Training
-device: "1"
+device: "0"
 epochs: 300
 batch_size: 8
 virtual_batches: false

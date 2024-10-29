@@ -32,29 +32,20 @@ class AnalysisTransform(nn.Module):
 
         self.down_conv_1 = nn.Sequential(
             ME.MinkowskiConvolution(in_channels=C_in, out_channels=N1, kernel_size=5, stride=2, bias=True, dimension=3),
-            MinkowskiGDN(N1),
-            #ME.MinkowskiReLU(inplace=False),
         )
         self.down_conv_2 = nn.Sequential(
             ME.MinkowskiConvolution(in_channels=N1, out_channels=N2, kernel_size=5, stride=2, bias=True, dimension=3),
-            MinkowskiGDN(N2),
-            #ME.MinkowskiReLU(inplace=False),
         )
         self.down_conv_3 = nn.Sequential(
             ME.MinkowskiConvolution(in_channels=N2, out_channels=N3, kernel_size=5, stride=2, bias=True, dimension=3),
-            MinkowskiGDN(N3),
-            #ME.MinkowskiReLU(inplace=False),
+        )
+        self.down_conv_4 = nn.Sequential(
             ME.MinkowskiConvolution(in_channels=N3, out_channels=N4, kernel_size=5, stride=1, bias=True, dimension=3)
         )
+        self.gdn1 = MinkowskiGDNScaled(N1, kernel_size=5)
+        self.gdn2 = MinkowskiGDNScaled(N2, kernel_size=5)
+        self.gdn3 = MinkowskiGDNScaled(N3, kernel_size=5)
 
-        # Q map
-        #self.Q_MLP = nn.Sequential(
-        #    nn.Linear(2, 8),
-        #    nn.ReLU(inplace=False),
-        #    nn.Linear(8, N4//2),
-        #    nn.ReLU(inplace=False),
-        #    nn.Linear(N4//2, N4*2),
-        #)
 
 
     def count_per_batch(self, x):
@@ -83,36 +74,32 @@ class AnalysisTransform(nn.Module):
         """
         k = []
         k.append(self.count_per_batch(x))
-
         num_batches = len(k[0])
-        q_value = torch.zeros((num_batches, 2), device=x.device)
+
+        q = torch.zeros((num_batches, 2), device=x.device)
         for i in range(num_batches):
             mask = (Q.C[:, 0] == i)
-            q_value[i] = torch.mean(Q.F[mask], dim=0)
-        q_value = q_value.unsqueeze(0)
+            q[i] = torch.mean(Q.F[mask], dim=0)
+        q = q.unsqueeze(0)
+
 
         # Level 1
         x = self.down_conv_1(x)
+        x = self.gdn1(x, q)
         k.append(self.count_per_batch(x))
 
         # Layer 2
         x = self.down_conv_2(x)
+        x = self.gdn2(x, q)
         k.append(self.count_per_batch(x))
 
         # Layer 3
         x = self.down_conv_3(x)
-
-        #gain = self.Q_MLP(q_value)
-        #gain = gain[0]
-        #betas, gammas = torch.split(gain, int(gain.shape[1]/2), dim=1)
-
-        ## Perform Gain
-        #for i in range(num_batches):
-            #mask = (x.C[:, 0] == i)
-            #x.F[mask] = F.softplus(betas[i]) * x.F[mask] + gammas[i]
+        x = self.gdn3(x, q)
+        x = self.down_conv_4(x)
 
         k.reverse()
-        return x, q_value, k
+        return x, q, k
 
 
 
@@ -143,20 +130,21 @@ class SparseSynthesisTransform(torch.nn.Module):
  
         self.up_1 = nn.Sequential(
             ME.MinkowskiConvolution(in_channels=N4, out_channels=N3, kernel_size=5, stride=1, bias=True, dimension=3),
-            MinkowskiGDN(N3, inverse=True),
-            #ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N3, out_channels=N2, kernel_size=5, stride=2, bias=True, dimension=3)
         )
         self.up_2 = nn.Sequential(
-            MinkowskiGDN(N2, inverse=True),
-            #ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N2, out_channels=N1, kernel_size=5, stride=2, bias=True, dimension=3)
+            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N3, out_channels=N2, kernel_size=5, stride=2, bias=True, dimension=3)
         )
         self.up_3 = nn.Sequential(
-            MinkowskiGDN(N1, inverse=True),
-            #ME.MinkowskiReLU(inplace=False),
+            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N2, out_channels=N1, kernel_size=5, stride=2, bias=True, dimension=3)
+        )
+        self.up_4 = nn.Sequential(
             ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N1, out_channels=N1//4, kernel_size=5, stride=2, bias=True, dimension=3)
         )
+
+        self.igdn_1 = MinkowskiGDNScaled(N3, inverse=True, kernel_size=5)
+        self.igdn_2 = MinkowskiGDNScaled(N2, inverse=True, kernel_size=5)
+        self.igdn_3 = MinkowskiGDNScaled(N1, inverse=True, kernel_size=5)
+
         self.color_conv = nn.Sequential(
             ME.MinkowskiConvolution(in_channels=N1//4, out_channels=C_out, kernel_size=1, stride=1, bias=True, dimension=3),
         )
@@ -177,15 +165,6 @@ class SparseSynthesisTransform(torch.nn.Module):
             ME.MinkowskiConvolution(in_channels=N4//8, out_channels=1, kernel_size=3, stride=1, bias=True, dimension=3),
         )
 
-        ## Q map
-        #self.Q_MLP = nn.Sequential(
-        #    nn.Linear(2, 8),
-        #    nn.ReLU(inplace=False),
-        #    nn.Linear(8, N4//2),
-        #    nn.ReLU(inplace=False),
-        #    nn.Linear(N4//2, N4*2),
-        #)
-
         self.prune = Pruning()
         
         # Auxiliary
@@ -193,7 +172,7 @@ class SparseSynthesisTransform(torch.nn.Module):
 
 
 
-    def forward(self, x, q_value, coords=None, k=None):
+    def forward(self, x, q, coords=None, k=None):
         """
         Forward pass for the synthesis transform
 
@@ -209,30 +188,24 @@ class SparseSynthesisTransform(torch.nn.Module):
         x: ME.SparseTensor
             Sparse Tensor containing the upsampled features at location of coords
         """
-        #num_batches = len(k[0])
-
-        #gain = self.Q_MLP(q_value)
-        #gain = gain[0]
-        #betas, gammas = torch.split(gain, int(gain.shape[1]/2), dim=1)
-
-        ## Perform Gain
-        #for i in range(num_batches):
-        #    mask = (x.C[:, 0] == i)
-        #    x.F[mask] = (x.F[mask] - gammas[i] )/ F.softplus(betas[i]) 
 
         x = self.up_1(x)
+        x = self.igdn_1(x, q)
+        x = self.up_2(x)
         predict_1 = self.predict_1(x)
         occupancy_mask = self._topk_prediction(predict_1, k[0])
         coords_1 = x.C[occupancy_mask]
         x = self.prune(x, coords_1)
 
-        x = self.up_2(x)
+        x = self.igdn_2(x, q)
+        x = self.up_3(x)
         predict_2 = self.predict_2(x)
         occupancy_mask = self._topk_prediction(predict_2, k[1])
         coords_2 = x.C[occupancy_mask]
         x = self.prune(x, coords_2)
 
-        x = self.up_3(x)
+        x = self.igdn_3(x, q)
+        x = self.up_4(x)
         predict_3 = self.predict_3(x)
         occupancy_mask = self._topk_prediction(predict_3, k[2])
         coords_3 = x.C[occupancy_mask]

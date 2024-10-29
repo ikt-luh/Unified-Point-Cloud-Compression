@@ -154,6 +154,7 @@ class Training():
         path = os.path.join(self.results_directory, "weights.pt")
         for epoch in range(self.epoch, self.config["epochs"]):
             # Training
+            #self.val_epoch(epoch)
             self.train_epoch(epoch)
 
             if ((epoch + 1)%10 == 0):
@@ -247,8 +248,8 @@ class Training():
                 N = source.shape[0]
                 sequence = data["cubes"][0]["sequence"][0]
 
-                q_as = range(0, 2)
-                q_gs = range(0, 2)
+                q_as = [0.05, 0.95]
+                q_gs = [0.05, 0.95]
                 for q_a in q_as:
                     for q_g in q_gs:
                         # Q Map

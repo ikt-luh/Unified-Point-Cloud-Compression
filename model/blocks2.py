@@ -220,15 +220,25 @@ class Pruning(nn.Module):
 
 
 class MinkowskiGDN(GDN):
+    def __init__(self,
+        in_channels: int,
+        inverse: bool = False,
+        beta_min: float = 1e-6,
+        gamma_init: float = 0.1,
+        kernel_size: int = 1,
+    ):
+        super(MinkowskiGDN, self).__init__(in_channels, inverse, beta_min, gamma_init)
+        self.kernel_size = kernel_size
+
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         _, C = x.F.size()
 
         beta = self.beta_reparam(self.beta)
         gamma = self.gamma_reparam(self.gamma)
+
         gamma = gamma.reshape(C, C, 1)
 
-
-        #norm = F.conv1d(torch.abs(x.F.detach().T).unsqueeze(0), gamma, beta)
         feats = x.F.T.unsqueeze(0)
         norm = F.conv1d(torch.abs(feats), gamma, beta)
         norm = norm[0].T
@@ -236,11 +246,110 @@ class MinkowskiGDN(GDN):
         if not self.inverse:
             norm = 1.0 / norm
 
-
-        #print(torch.min(norm), torch.max(norm))
-        # Clipping to avoid numerical instability
-        #if torch.max(norm) > 1000 or torch.min(norm) < 1e-4:
-        #print("GDN: Reached bounds")
-        #norm = torch.clip(norm, min=1e-4, max=1000)
         output_features = x.F[:] * norm 
         return ME.SparseTensor(coordinates=x.C, features=output_features, tensor_stride=x.tensor_stride, device=x.device)
+
+class MinkowskiGDNScaled(GDN):
+    def __init__(self,
+        in_channels: int,
+        inverse: bool = False,
+        beta_min: float = 1e-6,
+        gamma_init: float = 0.1,
+        kernel_size: int = 1,
+    ):
+        super(MinkowskiGDNScaled, self).__init__(in_channels, inverse, beta_min, gamma_init)
+
+        self.scaling_nn = nn.Sequential(
+            nn.Linear(2, in_channels//4),
+            nn.ReLU(inplace=False),
+            nn.Linear(in_channels//4, in_channels),
+            nn.ReLU(inplace=False),
+            nn.Linear(in_channels, in_channels),
+            nn.Softplus(),
+        )
+
+
+    def forward(self, x: torch.Tensor, q) -> torch.Tensor:
+        _, C = x.F.size()
+
+        scale = self.scaling_nn(q)
+            
+        batch_indices = x.C[:, 0]
+        scale_expanded = scale[0, batch_indices]
+
+
+        beta = self.beta_reparam(self.beta)
+        gamma = self.gamma_reparam(self.gamma)
+
+        gamma = gamma.reshape(C, C, 1)
+
+
+        if not self.inverse:
+            feats = (x.F * scale_expanded).T.unsqueeze(0)
+            norm = F.conv1d(torch.abs(feats), gamma, beta)
+            norm = norm[0].T
+            norm = 1.0 / norm
+            output_features = x.F[:] * norm 
+        else:
+            feats = x.F.T.unsqueeze(0)
+            norm = F.conv1d(torch.abs(feats), gamma, beta)
+            norm = norm[0].T
+            output_features = (x.F[:] * norm) / scale_expanded
+
+        #print(torch.min(output_features), torch.max(output_features))
+        return ME.SparseTensor(coordinates=x.C, features=output_features, tensor_stride=x.tensor_stride, device=x.device)
+
+"""
+
+        self.conv = ME.MinkowskiConvolution(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, stride=1, bias=True, dimension=3)
+
+        # Define gamma and beta as Parameters with correct shapes
+        gamma = self.conv.kernel
+        beta = self.conv.bias
+
+        # Initialize gamma and beta values
+        with torch.no_grad():
+            gamma.fill_(gamma_init)
+
+        gamma = self.gamma_reparam.init(gamma)
+        beta = self.beta_reparam.init(beta)
+        self.gamma = nn.Parameter(gamma)
+        self.beta = nn.Parameter(beta)
+
+        self.scaling_nn = nn.Sequential(
+            nn.Linear(2, in_channels//4),
+            nn.ReLU(inplace=False),
+            nn.Linear(in_channels//4, in_channels),
+            nn.ReLU(inplace=False),
+            nn.Linear(in_channels, in_channels),
+            nn.Softplus(),
+        )
+
+    def forward(self, x: torch.Tensor, q) -> torch.Tensor:
+        print(self.parameters())
+        _, C = x.F.size()
+
+        beta = self.beta_reparam(self.beta)
+        gamma = self.gamma_reparam(self.gamma)
+
+        scale = self.scaling_nn(q)
+            
+        batch_indices = x.C[:, 0]
+        scale_expanded = scale[0, batch_indices]
+        print(scale_expanded.shape)
+
+        scaled_features = x.F * scale_expanded
+        x = ME.SparseTensor(coordinates=x.C, features=scaled_features, tensor_stride=x.tensor_stride, device=x.device)
+
+        self.conv.bias = nn.Parameter(beta)
+        self.conv.kernel = nn.Parameter(gamma)
+        print(self.gamma[0])
+        norm = self.conv(x)
+
+        if not self.inverse:
+            output_features = x.F / norm.F 
+        else:
+            output_features = x.F * norm.F
+
+        return ME.SparseTensor(coordinates=x.C, features=output_features, tensor_stride=x.tensor_stride, device=x.device)
+"""

@@ -162,7 +162,7 @@ class MeanScaleHyperprior_Map(CompressionModel):
         x: 1, C, N
         scale: 1, B, C
         """
-        num_batches = torch.max(batch_indices) + 1
+        num_batches = int(torch.max(batch_indices) + 1)
         for i in range(num_batches):
             mask = (batch_indices == i)
 
@@ -178,7 +178,7 @@ class MeanScaleHyperprior_Map(CompressionModel):
         x: 1, C, N
         scale: 1, B, C
         """
-        num_batches = torch.max(batch_indices) + 1
+        num_batches = int(torch.max(batch_indices) + 1)
         C, N = x.shape[1], x.shape[2]
 
         combined_inputs = [] 
@@ -211,7 +211,6 @@ class MeanScaleHyperprior_Map(CompressionModel):
             mask = (q.C[:, 0] == i)
             q_value[i] = torch.mean(q.F[mask], dim=0)
         q = q_value.unsqueeze(0)
-
 
         z = self.h_a(y)
 
@@ -300,7 +299,6 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scale = self.scale_nn(q)
 
         indexes = self.gaussian_conditional.build_indexes(self.scale_per_batch(scales_hat, scale, y_batch_indices))
-        print(indexes)
         y_strings = self.gaussian_conditional.compress(
             self.scale_per_batch(y.F.t().unsqueeze(0), scale, y_batch_indices), 
             indexes, 
@@ -318,6 +316,7 @@ class MeanScaleHyperprior_Map(CompressionModel):
 
     def decompress(self, points, strings, shape, q):
         assert isinstance(strings, list) and len(strings) == 2
+
 
         # Get the points back
         y_points, z_points = points[0], points[1]

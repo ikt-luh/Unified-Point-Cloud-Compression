@@ -12,7 +12,8 @@ from bitstream import BitStream
 #from .transforms import *
 
 from .entropy_models2 import *
-from .transforms3 import *
+#from .transforms3 import *
+from .transforms4 import *
 
 import utils
 
@@ -70,7 +71,7 @@ class ColorModel(CompressionModel):
 
 
         # Synthesis Transform(s)
-        #x_hat, points, predictions = self.g_s(y_hat, Q_hat, coords=coords, k=k)
+        ####  x_hat, points, predictions = self.g_s(y_hat, Q_hat, coords=coords, k=k)
         x_hat, points, predictions = self.g_s(y_hat, Q_t, coords=coords, k=k)
         
         # Building Output dictionaries
@@ -168,7 +169,7 @@ class ColorModel(CompressionModel):
             # Entropy Bottleneck Compression
             #_ , strings, shape = self.entropy_model.compress(y)        
 
-            ### MOO Compression
+            # MOO Compression
             num_batches = torch.max(y.C[:, 0]) + 1
             q_value = torch.zeros((num_batches, 2), device=y.device)
             for i in range(num_batches):
@@ -186,7 +187,8 @@ class ColorModel(CompressionModel):
 
         # Combine block results into one bitstream (for saving)
         if path:
-            self.save_bitstream(path=path, blocks_coordinates=block_coordinates, blocks_strings=bitstreams, blocks_shapes=block_shapes, blocks_k=block_k)
+            self.save_bitstream(path=path, blocks_coordinates=block_coordinates, blocks_strings=bitstreams, blocks_shapes=block_shapes, blocks_k=block_k, blocks_q=block_q_vals)
+            #self.save_bitstream(path=path, blocks_coordinates=block_coordinates, blocks_strings=bitstreams, blocks_shapes=block_shapes, blocks_k=block_k)
         else:
             return bitstreams, block_shapes, block_k, block_coordinates, block_q_vals
 
@@ -216,11 +218,14 @@ class ColorModel(CompressionModel):
         """
         device = self.g_s.down_conv.kernel.device
         if path:
-            coordinates, strings, shape, k = self.load_bitstream(path)
+            coordinates, strings, shape, k, q_vals = self.load_bitstream(path)
+            #coordinates, strings, shape, k = self.load_bitstream(path)
             for i, _ in enumerate(coordinates):
                 block_coords = coordinates[i].to(device) 
                 batch_vec = torch.zeros((block_coords.shape[0], 1), device=block_coords.device)
                 coordinates[i] = torch.cat([batch_vec, block_coords.contiguous()], dim=1)
+                q_vals[i] = q_vals[i].to(device) 
+                #q_vals = []
 
         # Decompress blocks
         x_hat_list = []
@@ -253,7 +258,8 @@ class ColorModel(CompressionModel):
         return x_hat
 
 
-    def save_bitstream(self, path, blocks_coordinates, blocks_strings, blocks_shapes, blocks_k):
+    #def save_bitstream(self, path, blocks_coordinates, blocks_strings, blocks_shapes, blocks_k):
+    def save_bitstream(self, path, blocks_coordinates, blocks_strings, blocks_shapes, blocks_k, blocks_q):
         """
         Save multiple blocks to a bitstream.
 
@@ -282,6 +288,7 @@ class ColorModel(CompressionModel):
             strings = blocks_strings[i]
             shape = blocks_shapes[i]
             k = blocks_k[i]
+            q = blocks_q[i]
 
             # Save each block using the original single-block method
             # Encode points with G-PCC and write the shape, points bitstream, strings, and k values
@@ -291,6 +298,8 @@ class ColorModel(CompressionModel):
             # Shape
             stream.write(shape, np.int32)
             stream.write(len(points_bitstream), np.int32)
+            stream.write(q[0, 0, 0].cpu(), np.float64)
+            stream.write(q[0, 0, 1].cpu(), np.float64)
 
             # String lengths
             for string in strings:
@@ -302,6 +311,7 @@ class ColorModel(CompressionModel):
             stream.write(points_bitstream)
             for string in strings:
                 stream.write(string[0])
+
 
         # Write final bitstream to file
         bit_string = stream.__str__()
@@ -346,12 +356,14 @@ class ColorModel(CompressionModel):
         blocks_strings = []
         blocks_shapes = []
         blocks_k = []
+        blocks_q = []
 
         # For each block, load the block's data using the existing load_bitstream logic
         for _ in range(num_blocks):
             # Read the block header
             shape = [int(stream.read(np.uint32))]
             len_points_bitstream = stream.read(np.uint32)
+            q_vals = torch.tensor([stream.read(np.float64), stream.read(np.float64)]).reshape(1,1,2)
             len_string_1 = stream.read(np.uint32)
             len_string_2 = stream.read(np.uint32)
             string_lengths = [len_string_1, len_string_2]
@@ -378,8 +390,9 @@ class ColorModel(CompressionModel):
             blocks_strings.append(strings)
             blocks_shapes.append(shape)
             blocks_k.append(k)
+            blocks_q.append(q_vals)
 
-        return blocks_coordinates, blocks_strings, blocks_shapes, blocks_k
+        return blocks_coordinates, blocks_strings, blocks_shapes, blocks_k, blocks_q
 
 
     def gpcc_encode(self, points, directory):

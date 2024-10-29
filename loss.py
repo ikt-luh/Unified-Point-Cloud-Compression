@@ -228,7 +228,7 @@ class ShepardsLoss():
 
         # Define Minkowski convolutions
         self.conv_sum = self._init_minkowski_conv(4, self.window_size, self.window)
-        self.conv_sum_q = self._init_minkowski_conv(3, self.window_size, self.window)
+        #self.conv_sum_q = self._init_minkowski_conv(3, self.window_size, self.window)
 
     def _init_minkowski_conv(self, in_channels, kernel_size, kernel):
         """
@@ -277,21 +277,17 @@ class ShepardsLoss():
         Forward pass for Shepard's loss calculation.
         """
         self.conv_sum.to(gt.C.device)
-        self.conv_sum_q.to(gt.C.device)
+        #self.conv_sum_q.to(gt.C.device)
 
         prediction = pred["prediction"]
         q_map = pred["q_map"]
 
-        try:
-            gt_on_pred = self.interpolate_gt_to_pred(gt, prediction)
-            q_map_on_pred = self.interpolate_gt_to_pred(q_map, prediction, interpolate_q_map=True)
-        except RuntimeError:
-            print("Error in interpolation")
-            gt_on_pred = gt.features_at_coordinates(gt.C.float())
-            q_map_on_pred = gt.features_at_coordinates(gt.C.float())
+        gt_on_pred = self.interpolate_gt_to_pred(gt, prediction)
+        #q_map_on_pred = self.interpolate_gt_to_pred(q_map, prediction, interpolate_q_map=True)
 
-        valid_mask = (~torch.isnan(gt_on_pred.F)).all(dim=1)
-        color_loss = self.loss_func(gt_on_pred.F[valid_mask], prediction.F[valid_mask]) * q_map_on_pred.F[valid_mask, 1].unsqueeze(1)
+        valid_mask = (~torch.isnan(gt_on_pred.F) & ~torch.isinf(gt_on_pred.F)).all(dim=1)
+        batch_indicies = gt_on_pred.C[valid_mask, 0]
+        color_loss = self.loss_func(gt_on_pred.F[valid_mask], prediction.F[valid_mask]) * q_map.F[batch_indicies, 1].unsqueeze(1)
         
         return color_loss.mean()
 
@@ -305,7 +301,7 @@ class ShepardsLoss():
         overlapping_mask = utils.overlapping_mask(prediction, gt)
 
         # Concatenate gt and non-overlapping prediction coordinates
-        combined_coords = torch.cat([gt.C, prediction.C[~overlapping_mask].clone()])
+        combined_coords = torch.cat([gt.C, prediction.C[~overlapping_mask]])
         combined_tensor = ME.SparseTensor(
             coordinates=combined_coords,
             features=torch.ones(combined_coords.shape[0], N, device=gt.C.device),
@@ -330,7 +326,7 @@ class ShepardsLoss():
 
         # Create a tensor for ground truth on predicted coordinates
         gt_on_pred = ME.SparseTensor(
-            coordinates=prediction.C.clone(),
+            coordinates=prediction.C,
             features=torch.zeros((prediction.F.shape[0], N-1), device=gt.C.device),
             device=prediction.C.device
         )
