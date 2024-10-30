@@ -277,13 +277,10 @@ class ShepardsLoss():
         Forward pass for Shepard's loss calculation.
         """
         self.conv_sum.to(gt.C.device)
-        #self.conv_sum_q.to(gt.C.device)
-
-        prediction = pred["prediction"]
+        prediction = ME.SparseTensor(coordinates=pred["prediction"].C, features=pred["prediction"].F, device=pred["prediction"].C.device)
         q_map = pred["q_map"]
 
         gt_on_pred = self.interpolate_gt_to_pred(gt, prediction)
-        #q_map_on_pred = self.interpolate_gt_to_pred(q_map, prediction, interpolate_q_map=True)
 
         valid_mask = (~torch.isnan(gt_on_pred.F) & ~torch.isinf(gt_on_pred.F)).all(dim=1)
         batch_indicies = gt_on_pred.C[valid_mask, 0]
@@ -298,6 +295,7 @@ class ShepardsLoss():
         """      
         N = 3 if interpolate_q_map else 4
 
+        # Duplicate removal (Some rare cases)
         overlapping_mask = utils.overlapping_mask(prediction, gt)
 
         # Concatenate gt and non-overlapping prediction coordinates
@@ -315,10 +313,7 @@ class ShepardsLoss():
         combined_tensor.F[overlapping_mask_comb, 1] = 1.0
         combined_tensor.F[overlapping_mask_comb, 1:] = gt.features_at_coordinates(combined_tensor.C[overlapping_mask_comb].float())
 
-        if interpolate_q_map:
-            gt_interpolated = self.conv_sum_q(combined_tensor)
-        else:
-            gt_interpolated = self.conv_sum(combined_tensor)
+        gt_interpolated = self.conv_sum(combined_tensor)
 
         # Interpolate raw features from the ground truth at the non-overlapping predicted locations
         raw_features = gt_interpolated.features_at_coordinates(prediction.C[~overlapping_mask].float())[:, 1:] / \
@@ -332,9 +327,9 @@ class ShepardsLoss():
         )
 
         # Set features for overlapping points and interpolate for non-overlapping points
-        overlapping_mask2 = utils.overlapping_mask(gt_on_pred, gt)
-        gt_on_pred.F[overlapping_mask2] = gt.features_at_coordinates(gt_on_pred.C[overlapping_mask2].float())
-        gt_on_pred.F[~overlapping_mask2] = raw_features
+        #overlapping_mask2 = utils.overlapping_mask(gt_on_pred, gt)
+        gt_on_pred.F[overlapping_mask] = gt.features_at_coordinates(gt_on_pred.C[overlapping_mask].float())
+        gt_on_pred.F[~overlapping_mask] = raw_features
 
         return gt_on_pred
 

@@ -237,16 +237,25 @@ def pc_metrics(reference, distorted, metric_path, data_path, resolution):
     # Save distorted
     if isinstance(distorted, o3d.geometry.PointCloud):
         distorted_path = os.path.join(data_path, "distorted.ply") 
-        save_ply(distorted_path, distorted)
+        save_ply(distorted_path, distorted, has_normals=True)
     else:
         distorted_path = os.path.join(distorted)
 
     # Call PCQM
+    """
     command = [metric_path,
                '--uncompressedDataPath={}'.format(ref_path),
                '--reconstructedDataPath={}'.format(distorted_path),
+               '--normalDataPath={}'.format(ref_path),
                '--resolution={}'.format(resolution),
                '--frameCount=1'
+                ]
+    """
+    command = [metric_path,
+               '--fileA={}'.format(ref_path),
+               '--fileB={}'.format(distorted_path),
+               '--resolution={}'.format(resolution),
+               '--color=1'
                 ]
     result = subprocess.run(command, stdout=subprocess.PIPE)
 
@@ -267,10 +276,9 @@ def pc_metrics(reference, distorted, metric_path, data_path, resolution):
         metrics[prefix[j] + "p2p_psnr"] = float(lines[start+2].split(':')[-1].strip())
 
         # only symmetric
-        if j == 2:
-            metrics[prefix[j] + "d2_mse"] = float(lines[start+3].split(':')[-1].strip())
-            metrics[prefix[j] + "d2_psnr"] = float(lines[start+4].split(':')[-1].strip())
-            start += 2
+        metrics[prefix[j] + "d2_mse"] = float(lines[start+3].split(':')[-1].strip())
+        metrics[prefix[j] + "d2_psnr"] = float(lines[start+4].split(':')[-1].strip())
+        start += 2
 
         metrics[prefix[j] + "y_mse"] = float(lines[start+3].split(':')[-1].strip())
         metrics[prefix[j] + "u_mse"] = float(lines[start+4].split(':')[-1].strip())
@@ -343,36 +351,70 @@ def pcqm(reference, distorted, pcqm_path, data_path, settings=None):
 
     return pcqm_value
 
-def save_ply(path, ply):
+def save_ply(path, ply, has_normals=False):
+    # Write the original point cloud to a PLY file in ASCII format
     o3d.io.write_point_cloud(path, ply, write_ascii=True)
 
+    # Read the written PLY file to modify its header and data
     with open(path, "r") as ply_file:
         lines = ply_file.readlines()
 
+    # Extract the header
     header = []
-    for i, line in enumerate(lines):
+    data_lines = []
+    header_found = False
+    
+    for line in lines:
         header.append(line)
         if line.strip() == "end_header":
-            break
+            header_found = True
+        elif header_found:
+            data_lines.append(line)
 
-    # Update the property data type from double to float
+    # Update the property data type from double to float in the header
     new_header = []
     for line in header:
         if "property double" in line:
             new_header.append(line.replace("double", "float"))
-    
         else:
             new_header.append(line)
 
     # Convert the data values from double to float
-    data_lines = lines[i + 1:]
-    data = np.genfromtxt(data_lines, dtype=np.int32)
+    data = np.genfromtxt(data_lines, dtype=np.float64)
+
+    # Define the structured data type
+    if has_normals:
+        structured_data = np.zeros(data.shape[0], dtype=[('int1', 'i4'), ('int2', 'i4'), ('int3', 'i4'),
+                                                        ('normal_x', 'f4'), ('normal_y', 'f4'), ('normal_z', 'f4'),
+                                                        ('int4', 'i4'), ('int5', 'i4'), ('int6', 'i4')])
+        # Assuming the data has normals, adjust indices accordingly
+        structured_data['int1'] = data[:, 0].astype(np.int32)
+        structured_data['int2'] = data[:, 1].astype(np.int32)
+        structured_data['int3'] = data[:, 2].astype(np.int32)
+        structured_data['normal_x'] = data[:, 3].astype(np.float32)
+        structured_data['normal_y'] = data[:, 4].astype(np.float32)
+        structured_data['normal_z'] = data[:, 5].astype(np.float32)
+        structured_data['int4'] = data[:, 6].astype(np.int32)
+        structured_data['int5'] = data[:, 7].astype(np.int32)
+        structured_data['int6'] = data[:, 8].astype(np.int32)
+    else:
+        structured_data = np.zeros(data.shape[0], dtype=[('int1', 'i4'), ('int2', 'i4'), ('int3', 'i4'),
+                                                        ('int4', 'i4'), ('int5', 'i4'), ('int6', 'i4')])
+        # No normals, map accordingly
+        structured_data['int1'] = data[:, 0].astype(np.int32)
+        structured_data['int2'] = data[:, 1].astype(np.int32)
+        structured_data['int3'] = data[:, 2].astype(np.int32)
+        structured_data['int4'] = data[:, 3].astype(np.int32)
+        structured_data['int5'] = data[:, 4].astype(np.int32)
+        structured_data['int6'] = data[:, 5].astype(np.int32)
 
     # Save the modified PLY file
     with open(path, "w") as ply_file:
+        # Write the new header
         for line in new_header:
             ply_file.write(line)
-        for row in data:
+        # Write the structured data
+        for row in structured_data:
             ply_file.write(" ".join(map(str, row)) + "\n")
         
 
@@ -488,7 +530,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
     bin_dir = os.path.join(path, "points_enc.bin")
 
     N = data["src"]["points"].shape[1]
-    sequence = data["cubes"][0]["sequence"][0]
+    #sequence = data["cubes"][0]["sequence"][0]
 
     # Data processing
     dtype = o3d.core.float32
@@ -516,12 +558,14 @@ def compress_related(experiment, data, q_a, q_g, base_path):
                 '--planarModeIdcmUse=0',
                 '--convertPlyColourspace=1',
 
-                '--transformType=0',
+                '--transformType=2',
+                '--numberOfNearestNeighborsInPrediction=3',
                 '--qp={}'.format(q_a),
-                '--qpChromaOffset=-2',
+                '--adaptivePredictionThreshold=64',
+                '--qpChromaOffset=0',
                 '--bitdepth=8',
-                '--attrScale=1',
                 '--attrOffset=0',
+                '--attrScale=1',
                 '--attribute=color',
 
                 '--uncompressedDataPath={}'.format(src_dir),
@@ -624,11 +668,23 @@ def overlapping_mask(tensor1, tensor2):
     Get the overlapping coordinates of two tensors
     """
     # Define Scaling Factors
-    scaling_factors = torch.tensor([1, 1e2, 1e8, 1e12], dtype=torch.int64, device=tensor1.C.device)
+    scaling_factors = torch.tensor([1, 1e2, 1e7, 1e12], dtype=torch.int64, device=tensor1.C.device)
 
     # Transform to unique indices
     tensor1_flat = (tensor1.C.to(torch.int64) * scaling_factors).sum(dim=1)
     tensor2_flat = (tensor2.C.to(torch.int64) * scaling_factors).sum(dim=1)
+
+   # Check for duplicates in a deterministic manner
+    unique_tensor1, counts_tensor1 = torch.unique(tensor1_flat, return_counts=True)
+    unique_tensor2, counts_tensor2 = torch.unique(tensor2_flat, return_counts=True)
+
+    tensor1_duplicates = unique_tensor1[counts_tensor1 > 1]
+    tensor2_duplicates = unique_tensor2[counts_tensor2 > 1]
+
+    if tensor1_duplicates.numel() > 0:
+        print("Duplicate values in tensor1_flat:", tensor1_duplicates)
+    if tensor2_duplicates.numel() > 0:
+        print("Duplicate values in tensor2_flat:", tensor2_duplicates)
 
     # Mask
     mask = torch.isin(tensor1_flat, tensor2_flat)

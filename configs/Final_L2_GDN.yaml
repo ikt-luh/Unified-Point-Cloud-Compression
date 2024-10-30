@@ -1,5 +1,5 @@
 ## General
-experiment_name: "Final_L2_GDN"
+experiment_name: "Final_L2_GDN_softplus"
 results_path : "./results"
 
 # Model
@@ -37,13 +37,13 @@ transforms:
 #Q_Map
 q_map:
   lambda_A_min: 0
-  lambda_A_max: 25600
+  lambda_A_max: 51200
   lambda_G_min: 0
-  lambda_G_max: 200
+  lambda_G_max: 400
   mode: "quadratic"
 
 ## Training
-device: "3"
+device: "1"
 epochs: 300
 batch_size: 8
 virtual_batches: false

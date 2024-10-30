@@ -12,8 +12,8 @@ from bitstream import BitStream
 #from .transforms import *
 
 from .entropy_models2 import *
-#from .transforms3 import *
-from .transforms4 import *
+from .transforms3 import *
+#from .transforms4 import *
 
 import utils
 
@@ -60,7 +60,7 @@ class ColorModel(CompressionModel):
                             features=torch.cat([torch.ones((x.C.shape[0], 1), device=x.device), x.F], dim=1))
 
         # Analysis Transform
-        y, Q_t, k = self.g_a(x, Q)
+        y, Q, k = self.g_a(x, Q)
 
         # Entropy Bottleneck
         #y_hat, Q_hat, likelihoods = self.entropy_model(y)
@@ -72,7 +72,7 @@ class ColorModel(CompressionModel):
 
         # Synthesis Transform(s)
         ####  x_hat, points, predictions = self.g_s(y_hat, Q_hat, coords=coords, k=k)
-        x_hat, points, predictions = self.g_s(y_hat, Q_t, coords=coords, k=k)
+        x_hat, points, predictions = self.g_s(y_hat, Q, coords=coords, k=k)
         
         # Building Output dictionaries
         output = {

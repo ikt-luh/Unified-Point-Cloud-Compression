@@ -162,14 +162,14 @@ class MeanScaleHyperprior_Map(CompressionModel):
         x: 1, C, N
         scale: 1, B, C
         """
+        y = x.clone()
         num_batches = int(torch.max(batch_indices) + 1)
         for i in range(num_batches):
             mask = (batch_indices == i)
 
             result = scale[0, i].unsqueeze(1) * x[0, :, mask]
-            x = x.clone()
-            x[0, :, mask] = result
-        return x
+            y[0, :, mask] = result
+        return y
 
     def get_offsets(self, x, scale, batch_indices):
         """
@@ -197,20 +197,12 @@ class MeanScaleHyperprior_Map(CompressionModel):
         result_flat = self.quant_nn(combined_inputs_flat)  
         result = result_flat.view(C, N)
 
-        x = x.clone()  # Clone to avoid in-place modification
-        x[0, :, :] = result
-        return x
+        y = x.clone()  # Clone to avoid in-place modification
+        y[0, :, :] = result
+        return y
 
     def forward(self, y, q):
         y_batch_indices = y.C[:, 0]
-
-        # TODO: Temporary to handle SparseTensor Q_maps
-        num_batches = torch.max(y_batch_indices) + 1
-        q_value = torch.zeros((num_batches, 2), device=y.device)
-        for i in range(num_batches):
-            mask = (q.C[:, 0] == i)
-            q_value[i] = torch.mean(q.F[mask], dim=0)
-        q = q_value.unsqueeze(0)
 
         z = self.h_a(y)
 
@@ -235,20 +227,18 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0) 
 
-        scale = self.scale_nn(q)
-        #scale = torch.ones_like(scale)
-        #print(torch.max(scale), torch.min(scale))
-        rescale = 1.0 / scale.clone().detach()
+        scale = self.scale_nn(q) + 0.1
+        rescale = torch.tensor(1.0) / scale.clone().detach() #TODO: is this a good idea?
 
         y_feats_tmp = (y_feats - means_hat)
         y_feats_tmp = self.scale_per_batch(y_feats_tmp, scale, y_batch_indices)
-
         signs = torch.sign(y_feats_tmp).detach()
         y_q_abs = ops.quantize_ste(torch.abs(y_feats_tmp))
+        #y_q_abs = torch.abs(y_feats_tmp)
         y_q_stdev = self.gaussian_conditional.lower_bound_scale(self.scale_per_batch(scales_hat, scale, y_batch_indices))
 
         # Get offsets from stdev and scale (Per element)
-        q_offsets = (-1) * self.get_offsets(y_q_stdev, scale, y_batch_indices)
+        q_offsets = (-1) * self.get_offsets(y_q_stdev.clone().detach(), scale.clone().detach(), y_batch_indices)
         q_offsets[y_q_abs < 0.0001] = (0)
 
         # Find the right scales
@@ -259,6 +249,7 @@ class MeanScaleHyperprior_Map(CompressionModel):
         )
         y_hat = signs * (y_q_abs + q_offsets)
         y_hat = self.scale_per_batch(y_hat, rescale, y_batch_indices) + means_hat
+        print(torch.max(torch.abs(y_feats - y_hat)))
 
         y_hat = ME.SparseTensor(features=y_hat[0].t(), 
                                 coordinates=y.C,
@@ -339,8 +330,8 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0)
 
-        scale = self.scale_nn(q)
-        rescale = 1.0 / scale
+        scale = self.scale_nn(q) + 0.1
+        rescale = torch.tensor(1.0) / scale
 
         indexes = self.gaussian_conditional.build_indexes(self.scale_per_batch(scales_hat, scale, batch_indices=y_batch_indices))
         q_val = self.gaussian_conditional.decompress(y_strings, indexes)
@@ -350,12 +341,11 @@ class MeanScaleHyperprior_Map(CompressionModel):
         y_q_stdev = self.gaussian_conditional.lower_bound_scale(self.scale_per_batch(scales_hat, scale, y_batch_indices))
 
         # Get offsets from stdev and scale (Per element)
-        q_offsets = (-1) * self.get_offsets(y_q_stdev, rescale, y_batch_indices)
+        q_offsets = (-1) * self.get_offsets(y_q_stdev, scale, y_batch_indices)
         q_offsets[q_abs < 0.0001] = (0)
         
         y_hat = signs * (q_abs + q_offsets)
         y_hat = self.scale_per_batch(y_hat, rescale, y_batch_indices) + means_hat
-        #means=self.scale_per_batch(means_hat, scale, batch_indices=y_batch_indices)
 
         y_hat = ME.SparseTensor(features=y_hat[0].t(),
                                 coordinates=y_points,

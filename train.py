@@ -154,7 +154,6 @@ class Training():
         path = os.path.join(self.results_directory, "weights.pt")
         for epoch in range(self.epoch, self.config["epochs"]):
             # Training
-            #self.val_epoch(epoch)
             self.train_epoch(epoch)
 
             if ((epoch + 1)%10 == 0):

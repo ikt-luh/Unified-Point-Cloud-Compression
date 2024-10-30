@@ -26,23 +26,42 @@ norm = Normalize(vmin=0.0, vmax=10**(-2))
 base_path = "./results"
 data_path = "./data/datasets/full_128" 
 ref_paths = {
+     "longdress" : "./data/datasets/8iVFB/longdress_vox10_1300.ply",
+     "soldier" : "./data/datasets/8iVFB/soldier_vox10_0690.ply",
+     "loot" : "./data/datasets/8iVFB/loot_vox10_1200.ply",
+     "redandblack" : "./data/datasets/8iVFB/redandblack_vox10_1550.ply",
+
+     "basketball_player" : "./data/datasets/Owlii/basketball_player_vox11_00000200.ply",
+     "dancer" : "./data/datasets/Owlii/dancer_vox11_00000001.ply",
+     "exercise" : "./data/datasets/Owlii/exercise_vox11_00000001.ply",
+     "model" : "./data/datasets/Owlii/model_vox11_00000001.ply",
+
      #"thaidancer" : "./data/datasets/raw/jpeg_testset/Thaidancer_viewdep_vox12.ply",
      #"bouquet" : "./data/datasets/raw/jpeg_testset/RWT130Bouquet.ply",
      #"stmichael" : "./data/datasets/raw/jpeg_testset/RWT70StMichael.ply",
      #"soldier" : "./data/datasets/raw/jpeg_testset/soldier_vox10_0690.ply",
 
      #"boxer" : "./data/datasets/raw/jpeg_testset/boxer_viewdep_vox12.ply",
-     "House" : "./data/datasets/raw/jpeg_testset/House_without_roof_00057_vox12.ply",
-     "CITISUP" : "./data/datasets/raw/jpeg_testset/CITIUSP_vox13.ply",
-     "Facade" : "./data/datasets/raw/jpeg_testset/Facade_00009_vox12.ply",
+     #"House" : "./data/datasets/raw/jpeg_testset/House_without_roof_00057_vox12.ply",
+     #"CITISUP" : "./data/datasets/raw/jpeg_testset/CITIUSP_vox13.ply",
+     #"Facade" : "./data/datasets/raw/jpeg_testset/Facade_00009_vox12.ply",
 
-     "EPFL" : "./data/datasets/raw/jpeg_testset/EPFL_vox13.ply",
-     "Arco" : "./data/datasets/raw/jpeg_testset/Arco_Valentino_Dense_vox12.ply",
-     "shiva" : "./data/datasets/raw/jpeg_testset/Shiva_00035_vox12.ply",
-     "Unicorn" : "./data/datasets/raw/jpeg_testset/ULB_Unicorn_vox13_n.ply",
+     #"EPFL" : "./data/datasets/raw/jpeg_testset/EPFL_vox13.ply",
+     #"Arco" : "./data/datasets/raw/jpeg_testset/Arco_Valentino_Dense_vox12.ply",
+     #"shiva" : "./data/datasets/raw/jpeg_testset/Shiva_00035_vox12.ply",
+     #"Unicorn" : "./data/datasets/raw/jpeg_testset/ULB_Unicorn_vox13_n.ply",
      }
 resolutions ={
+     "longdress" : 1023, 
      "soldier" : 1023, 
+     "loot" : 1023, 
+     "redandblack" : 1023, 
+
+     "basketball_player" : 2047, 
+     "dancer" : 2047, 
+     "model" : 2047, 
+     "exercise" : 2047, 
+
      "boxer" : 4095,
      "thaidancer" : 4095,
      "bouquet" : 1023,
@@ -59,6 +78,15 @@ resolutions ={
 }
 block_sizes ={
      "soldier" : 1024, 
+     "longdress" : 1024, 
+     "loot" : 1024, 
+     "redandblack" : 1024, 
+
+     "model" : 2048, 
+     "exercise" : 2048, 
+     "dancer" : 2048, 
+     "basketball_player" : 2048, 
+
      "boxer" : 512,
      "thaidancer" : 512,
      "bouquet" : 512,
@@ -77,9 +105,9 @@ block_sizes ={
 
 device_id = 3
 experiments = [
-    "Ours",
+    #"Ours",
     #"V-PCC",
-    #"G-PCC",
+    "G-PCC",
     ]
 
 related_work = [
@@ -122,10 +150,10 @@ def run_testset(experiments):
             model.eval()
             model.update()
         elif experiment == "G-PCC":
-            q_as = np.arange(21, 52)
-            q_gs = [0.125, 0.1875, 0.25, 0.375, 0.5, 0.75, 0.875, 0.9375]
+            #q_as = np.arange(21, 52)
+            q_as = [51, 46, 40, 34, 28, 22]
+            q_gs = [0.0625, 0.125, 0.1875, 0.25, 0.375, 0.5, 0.75, 0.875, 0.9375]
         elif experiment == "V-PCC":
-            #q_as = [42, 37, 32, 27, 22]
             q_as = np.arange(22, 43)
             q_gs = [32, 28, 24, 20, 16]
         
@@ -133,23 +161,6 @@ def run_testset(experiments):
         with torch.no_grad():
             for s, sequence in enumerate(ref_paths.keys()):
                 ref_path = ref_paths[sequence]
-                """
-                with open(ref_path, "rb") as f:
-                    plydata = PlyData.read(f)
-
-                # Load ply and convert to points array
-                points = np.vstack([plydata['vertex'].data['x'], 
-                                    plydata['vertex'].data['y'], 
-                                    plydata['vertex'].data['z']]).T
-                colors = np.vstack([plydata['vertex'].data['red'], 
-                                    plydata['vertex'].data['green'], 
-                                    plydata['vertex'].data['blue']]).T / 255.0
-                #cd = o3d.io.read_point_cloud(ref_path, format="ply")
-                points = torch.from_numpy(points).unsqueeze(0).float()
-                colors = torch.from_numpy(colors).unsqueeze(0).float()
-                data = { "src" : {"points" : points, "colors": colors}}
-                """
-
                 pcd = o3d.io.read_point_cloud(ref_path)
 
                 # Step 2: Convert Open3D point cloud data to NumPy arrays
@@ -189,18 +200,17 @@ def run_testset(experiments):
 
                         tmp_path = os.path.join(base_path,
                                                 experiment)
-                        """
+                        rec_pc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamRadius(radius=5.0))
                         results = utils.pc_metrics(ref_path, 
                                                      rec_pc, 
-                                                     "dependencies/mpeg-pcc-tmc2/bin/PccAppMetrics",
+                                                     "dependencies/mpeg-pcc-dmetric-master/test/pc_error",
                                                      tmp_path,
                                                      resolution=resolutions[sequence])
-                        """
-                        results = {}
                         results["pcqm"] = utils.pcqm(ref_path, 
                                                      rec_pc, 
                                                      "dependencies/PCQM/build",
                                                      tmp_path)
+
 
                         # Save results
                         results["bpp"] = bpp

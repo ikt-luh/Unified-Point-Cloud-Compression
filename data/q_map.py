@@ -173,12 +173,11 @@ class Q_Map(object):
             Q_Map of the data
         """
         batch_indices = torch.unique(geometry.C[:, 0])
-        N = geometry.C.shape[0]
 
-        q_map = ME.SparseTensor(coordinates=geometry.C, features=torch.zeros(N, 2), device=geometry.device)
+        q_map = torch.zeros((batch_indices+1, 2), device=geometry.device)
         for batch_idx in batch_indices:
-            mask = geometry.C[:,0]==batch_idx
-            self.random_q_map(geometry, q_map, mask)
+            q_map[batch_idx, 0] = random.uniform(0, 1)
+            q_map[batch_idx, 1] = random.uniform(0, 1)
 
         # Scale 
         lambda_map = self.scale_q_map(q_map)
@@ -198,97 +197,4 @@ class Q_Map(object):
             lambda_map_features[:, 1] = lambda_map_features[:, 1]**2 * self.a_A + self.b_A
         else:
             raise ValueError("Unknown Q_map mode")
-
-        lambda_map = ME.SparseTensor(coordinates=q_map.C, 
-                                features=lambda_map_features, 
-                                coordinate_manager=q_map.coordinate_manager)
-        return lambda_map
-
-        
-    def random_q_map(self, geometry, q_map, mask):
-        """
-        Builds a random Q_map for training
-        
-        Parameters
-        ----------
-        args: Datatype
-            Description
-        """
-        coordinates = geometry.C[mask]
-        features = geometry.F[mask]
-        choice = random.choice(range(1))
-        #choice = random.choice(range(2))
-
-        if choice == 0:
-            q_feats = self.uniform(coordinates)
-        elif choice == 1:
-            q_feats = self.gradient(coordinates)
-        
-
-
-        # Replace in q_map
-        q_map.F[mask] = q_feats
-
-
-    def gradient(self, coordinates):
-        """
-        Builds a gradient Q_map based on the geometry
-        
-        Parameters
-        ----------
-        args: Datatype
-            Description
-        
-        """
-        direction = random.randint(1,3)
-        min, max = torch.min(coordinates[:, direction]), torch.max(coordinates[:, direction])
-
-        q_feats = torch.clamp((coordinates[:, direction] - min) / (max - min + 1e-10), 0, 1)
-        q_feats = q_feats.unsqueeze(1).repeat(1, 2)
-        return q_feats
-
-    def uniform(self, coordinates):
-        """
-        Builds a uniform Q_map based on the geometry
-        
-        Parameters
-        ----------
-        args: Datatype
-            Description
-        
-        """
-        N = coordinates.shape[0]
-        scale_geometry = random.uniform(0,1)
-        scale_attribute = random.uniform(0,1)
-        q_feats = torch.ones((N, 2), device=coordinates.device)
-        q_feats[:, 0] *= scale_geometry
-        q_feats[:, 1] *= scale_attribute
-        return q_feats
-
-    def empty(self, coordinates):
-        """
-        Builds a uniform Q_map based on the geometry
-        
-        Parameters
-        ----------
-        args: Datatype
-            Description
-        
-        """
-        N = coordinates.shape[0]
-        q_feats = torch.zeros((N, 1), device=coordinates.device)
-        return q_feats
-
-    def variance(self, coordinates, features, mode):
-        """
-        Builds a variance Q_map based on the features/coordinates complexity
-        
-        Parameters
-        ----------
-        args: Datatype
-            Description
-        
-        """
-
-            
-
+        return lambda_map_features
