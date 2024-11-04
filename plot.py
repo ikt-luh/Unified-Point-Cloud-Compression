@@ -25,6 +25,8 @@ runs = {
     "YOGA" : "YOGA",
     "G-PCC" : "G-PCC",
     "V-PCC" : "V-PCC",
+    "DeepPCC" : "DeepPCC",
+    "IT-DL-PCC" : "IT-DL-PCC",
 
     "L2_log" : "Final_quad_shepard",
     #"L2_log" : "Ours_quad",
@@ -33,8 +35,11 @@ runs = {
 bd_points = {
     "L2" : [(0.05, 0.05), (0.1, 0.1), (0.2, 0.2), (0.3, 0.4), (0.4, 0.5), (0.5, 0.7), (0.6, 0.9), ],
     "L2_log" : [(0.05, 0.05), (0.1, 0.1), (0.2, 0.2), (0.4, 0.4), (1, 1)],
-    "G-PCC" : [(0.125, 51), (0.25, 46), (0.5, 40), (0.75, 34), (0.9375, 22)], #last: (0.9375, 22) 
+    "G-PCC" : [(0.25, 46), (0.5, 40), (0.75, 34), (0.875, 28)], #last: (0.9375, 22) """(0.125, 51), ""
+
     "V-PCC" : [(32,42), (28, 37), (24, 32), (20, 27), (16, 22)],
+    "DeepPCC" : [(1, 1), (2, 2), (3, 3), (4, 4)],
+    "IT-DL-PCC" : [(0, 0.004), (0, 0.002), (0, 0.001), (0, 0.0005)],
 }
 pareto_ranges = {
     "longdress":{
@@ -76,6 +81,8 @@ run_colors = {
     "G-PCC" : style.colors[2],
     "V-PCC" : style.colors[1],
     "YOGA" : style.colors[4],
+    "DeepPCC" : style.colors[3],
+    "IT-DL-PCC" : style.colors[1],
 
     "L2_log" : style.colors[5],
     "SSIM" : style.colors[1],
@@ -85,6 +92,8 @@ linestyles = {
     "G-PCC" : style.linestyles[2],
     "V-PCC" : style.linestyles[1],
     "YOGA" : style.linestyles[4],
+    "DeepPCC" : style.linestyles[3],
+    "IT-DL-PCC" : style.linestyles[0],
 
     "L2_log" : style.linestyles[0],
     "SSIM" : style.linestyles[1],
@@ -94,6 +103,8 @@ markers = {
     "G-PCC" : style.markers[2],
     "V-PCC" : style.markers[1],
     "YOGA" : style.markers[4],
+    "DeepPCC" : style.markers[3],
+    "IT-DL-PCC" : style.markers[0],
 
     "L2_log" : style.markers[1],
     "SSIM" : style.markers[1],
@@ -105,6 +116,8 @@ labels = {
     "G-PCC" : "G-PCC",# (tmc13 v23)",
     "V-PCC" : "V-PCC", #(tmc2 v24)",
     "YOGA" : "YOGA",
+    "DeepPCC" : "DeepPCC",
+    "IT-DL-PCC": "IT-DL-PCC"
 }
 def plot_experiments():
     """

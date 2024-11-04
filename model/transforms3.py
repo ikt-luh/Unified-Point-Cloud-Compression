@@ -67,7 +67,7 @@ class AnalysisTransform(nn.Module):
         
         
 
-    def forward(self, x, Q):
+    def forward(self, x, q):
         """
         Forward pass for the analysis transform
 
@@ -84,12 +84,12 @@ class AnalysisTransform(nn.Module):
         k = []
         k.append(self.count_per_batch(x))
 
-        num_batches = len(k[0])
-        q_value = torch.zeros((num_batches, 2), device=x.device)
-        for i in range(num_batches):
-            mask = (Q.C[:, 0] == i)
-            q_value[i] = torch.mean(Q.F[mask], dim=0)
-        q_value = q_value.unsqueeze(0)
+        #num_batches = len(k[0])
+        #q_value = torch.zeros((num_batches, 2), device=x.device)
+        #for i in range(num_batches):
+        #    mask = (Q.C[:, 0] == i)
+        #    q_value[i] = torch.mean(Q.F[mask], dim=0)
+        #q_value = q_value.unsqueeze(0)
 
         # Level 1
         x = self.down_conv_1(x)
@@ -112,7 +112,7 @@ class AnalysisTransform(nn.Module):
             #x.F[mask] = F.softplus(betas[i]) * x.F[mask] + gammas[i]
 
         k.reverse()
-        return x, q_value, k
+        return x, q, k
 
 
 

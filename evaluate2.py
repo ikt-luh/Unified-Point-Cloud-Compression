@@ -21,6 +21,10 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
+os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
+torch.manual_seed(0)
+torch.use_deterministic_algorithms(True)
+
 norm = Normalize(vmin=0.0, vmax=10**(-2))
 # Paths
 base_path = "./results"
@@ -103,16 +107,20 @@ block_sizes ={
 }
 
 
-device_id = 3
+device_id = 0
 experiments = [
     #"Ours",
     #"V-PCC",
-    "G-PCC",
+    #"G-PCC",
+    #"IT-DL-PCC",
+
+    "Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn"
     ]
 
 related_work = [
     "G-PCC",
-    "V-PCC"
+    "V-PCC",
+    "IT-DL-PCC",
 ]
 
 def run_testset(experiments):
@@ -135,8 +143,6 @@ def run_testset(experiments):
             #q_gs = np.arange(6) * 0.2
             q_as = np.arange(21) * 0.05
             q_gs = np.arange(21) * 0.05
-            q_as = [0.5]
-            q_gs = [0.5]
 
             weight_path = os.path.join(base_path, experiment, "weights.pt")
             config_path = os.path.join(base_path, experiment, "config.yaml")
@@ -156,6 +162,9 @@ def run_testset(experiments):
         elif experiment == "V-PCC":
             q_as = np.arange(22, 43)
             q_gs = [32, 28, 24, 20, 16]
+        elif experiment == "IT-DL-PCC":
+            q_as = [0]
+            q_gs = [0.001, 0.002, 0.004, 0.0005, 0.00025, 0.000125]
         
 
         with torch.no_grad():

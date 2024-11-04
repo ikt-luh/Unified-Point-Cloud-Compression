@@ -174,7 +174,7 @@ class Q_Map(object):
         """
         batch_indices = torch.unique(geometry.C[:, 0])
 
-        q_map = torch.zeros((batch_indices+1, 2), device=geometry.device)
+        q_map = torch.zeros((torch.max(batch_indices)+1, 2), device=geometry.device)
         for batch_idx in batch_indices:
             q_map[batch_idx, 0] = random.uniform(0, 1)
             q_map[batch_idx, 1] = random.uniform(0, 1)
@@ -188,7 +188,7 @@ class Q_Map(object):
         """
         Scales the q_map to receive a Lambda map for loss computation
         """
-        lambda_map_features = q_map.F.clone()
+        lambda_map_features = q_map.clone()
         if self.mode == "exponential":
             lambda_map_features[:, 0] = 2**(lambda_map_features[:, 0] * self.a_G) + self.b_G
             lambda_map_features[:, 1] = 2**(lambda_map_features[:, 1] * self.a_A) + self.b_A

@@ -114,46 +114,13 @@ class ColorLoss():
         pred_colors = prediction.features_at_coordinates(gt.C[overlapping_mask].float())
         gt_colors = gt.F[overlapping_mask]
 
-        color_loss = self.loss_func(gt_colors, pred_colors) 
-        color_loss *= q_map.features_at_coordinates(gt.C[overlapping_mask].float())[:, 1].unsqueeze(1)
+        batch_mask = gt.C[overlapping_mask, 0]
+        color_loss = self.loss_func(gt_colors, pred_colors) * q_map[batch_mask, 1].unsqueeze(1)
+
 
         return color_loss.mean()
     
 
-class FocalLoss():
-    """
-    Focal Loss for predicted voxels
-    for gamma = 0, this is BCE
-    """
-    def __init__(self, config):
-        self.identifier = config["id"]
-        self.alpha = config["alpha"]
-        self.gamma = config["gamma"]
-
-    def __call__(self, gt, pred):
-        prediction = pred["prediction"]
-
-        # Convert 3D coordinates to a flattened representation
-        scaling_factors = torch.tensor([1, 1e4, 1e8, 1e12], dtype=torch.int64, device=gt.C.device)
-        gt_flat = (gt.C.to(torch.int64) * scaling_factors).sum(dim=1)
-        pred_flat = (prediction.C.to(torch.int64) * scaling_factors).sum(dim=1)
-
-        # Identify non-overlapping coordinates
-        overlapping_mask = torch.isin(pred_flat, gt_flat)
-        
-        # Classificaton
-        p_z = F.sigmoid(prediction.F[:, 0]+0.5) # F[0] contains occupancy
-        
-        # Build pt_z and alpha_z
-        pt_z = torch.where(overlapping_mask, p_z, 1 - p_z)
-        alpha_z = torch.where(overlapping_mask, self.alpha, 1 - self.alpha)
-        pt_z = torch.clip(pt_z, 1e-2, 1)
-
-        # Focal Loss
-        focal_loss = - alpha_z * (1-pt_z)**self.gamma * torch.log(pt_z)
-        focal_loss = focal_loss.mean()
-
-        return focal_loss * pred["lambdas"][0][0]
 
 class Multiscale_FocalLoss():
     """
@@ -197,11 +164,9 @@ class Multiscale_FocalLoss():
             # Focal Loss
             focal_loss = - alpha_z * (1-pt_z)**self.gamma * torch.log(pt_z)
             
-            # Q Map
-            q_avgs = self.pooling(q_map, coordinates=prediction.C)
-            q_map = self.down_pooling(q_map)
+            batch_mask = prediction.C[:, 0]
+            loss += (focal_loss * q_map[batch_mask, 0]).mean()
 
-            loss += (focal_loss * q_avgs.features_at_coordinates(prediction.C.float())[:, 0]).mean()
 
         return loss
 
@@ -228,7 +193,6 @@ class ShepardsLoss():
 
         # Define Minkowski convolutions
         self.conv_sum = self._init_minkowski_conv(4, self.window_size, self.window)
-        #self.conv_sum_q = self._init_minkowski_conv(3, self.window_size, self.window)
 
     def _init_minkowski_conv(self, in_channels, kernel_size, kernel):
         """
@@ -284,8 +248,7 @@ class ShepardsLoss():
 
         valid_mask = (~torch.isnan(gt_on_pred.F) & ~torch.isinf(gt_on_pred.F)).all(dim=1)
         batch_indicies = gt_on_pred.C[valid_mask, 0]
-        color_loss = self.loss_func(gt_on_pred.F[valid_mask], prediction.F[valid_mask]) * q_map.F[batch_indicies, 1].unsqueeze(1)
-        
+        color_loss = self.loss_func(gt_on_pred.F[valid_mask], prediction.F[valid_mask]) * q_map[batch_indicies, 1].unsqueeze(1)
         return color_loss.mean()
 
 

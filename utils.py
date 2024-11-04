@@ -475,16 +475,8 @@ def compress_model_ours(experiment, model, data, q_a, q_g, block_size, device, b
     bin_path = os.path.join(bin_path, "bitstream.bin")
 
     # Q Map
-    if type(q_a) is float or type(q_a) is np.float64:  
-        # Uniform map
-        Q_map = ME.SparseTensor(coordinates=torch.cat([torch.zeros((N, 1), device=device), points[0]], dim=1), 
-                                features=torch.cat([torch.ones((N,1), device=device) * q_g, torch.ones((N,1), device=device) * q_a], dim=1),
-                                device=source.device)
-    else: 
-        feats = torch.cat([torch.tensor(q_g), torch.tensor(q_a)], dim=1).type(torch.float32)
-        Q_map = ME.SparseTensor(coordinates=torch.cat([torch.zeros((N, 1), device=device), points[0]], dim=1), 
-                                features=feats,
-                                device=source.device)
+    Q_map = torch.tensor([[q_g, q_a]], device=device, dtype=torch.float)
+
 
     # Compression
     torch.cuda.synchronize()
@@ -558,11 +550,19 @@ def compress_related(experiment, data, q_a, q_g, base_path):
                 '--planarModeIdcmUse=0',
                 '--convertPlyColourspace=1',
 
-                '--transformType=2',
-                '--numberOfNearestNeighborsInPrediction=3',
+                #'--transformType=2',
+                #'--numberOfNearestNeighborsInPrediction=3',
+                #'--qp={}'.format(q_a),
+                #'--adaptivePredictionThreshold=64',
+                #'--qpChromaOffset=0',
+                #'--bitdepth=8',
+                #'--attrOffset=0',
+                #'--attrScale=1',
+                #'--attribute=color',
+
+                '--transformType=0',
                 '--qp={}'.format(q_a),
-                '--adaptivePredictionThreshold=64',
-                '--qpChromaOffset=0',
+                '--qpChromaOffset=-2',
                 '--bitdepth=8',
                 '--attrOffset=0',
                 '--attrScale=1',
@@ -609,7 +609,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         os.remove(rec_dir)
         os.remove(src_dir)
         os.remove(bin_dir)
-    else: 
+    elif experiment == "V-PCC": 
         # Compress the point cloud using V-PCC
         occPrecision = 4 if q_g > 16 else 2
         command = ['./dependencies/mpeg-pcc-tmc2/bin/PccAppEncoder',
@@ -654,6 +654,47 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         rec_pc = o3d.io.read_point_cloud(rec_dir)
         colors = np.asarray(rec_pc.colors)
         rec_pc.colors=o3d.utility.Vector3dVector(colors)
+    elif experiment=="IT-DL-PCC":
+        command = ['python3', './dependencies/IT-DL-PCC/src/IT-DL-PCC.py',
+            '--with_color',
+            '--cuda', # Causes artifacts
+            'compress',
+            '{}'.format(src_dir),
+            './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(q_g),
+            '{}'.format(path),
+            '--scale=1',
+            '--blk_size=256',
+        ]
+        t0 = time.time()
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        t_compress = time.time() - t0
+
+        out = result.stdout.decode()
+
+        bin_dir = os.path.join(path, "points_enc/points_enc.gz")
+        bpp = os.path.getsize(bin_dir) * 8 / N
+
+        command = ['python3', './dependencies/IT-DL-PCC/src/IT-DL-PCC.py',
+            '--with_color',
+            'decompress',
+            '{}'.format(bin_dir),
+            './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(q_g)
+        ]
+
+        t0 = time.time()
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        t_decompress = time.time() - t0
+
+        out = result.stdout.decode()
+        rec_dir = os.path.join(path, "points_enc/points_enc.gz.dec.ply")
+        rec_pc = o3d.io.read_point_cloud(rec_dir)
+        colors = np.asarray(rec_pc.colors)
+        rec_pc.colors=o3d.utility.Vector3dVector(colors)
+        #Cleanup
+        os.remove(rec_dir)
+        os.remove(src_dir)
+        os.remove(bin_dir)
+
 
     # Reconstruct source
     points = data["src"]["points"]

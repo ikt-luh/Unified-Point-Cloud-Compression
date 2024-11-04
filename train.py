@@ -155,6 +155,7 @@ class Training():
         for epoch in range(self.epoch, self.config["epochs"]):
             # Training
             self.train_epoch(epoch)
+            #self.val_epoch(epoch)
 
             if ((epoch + 1)%10 == 0):
                 self.val_epoch(epoch)
@@ -247,14 +248,12 @@ class Training():
                 N = source.shape[0]
                 sequence = data["cubes"][0]["sequence"][0]
 
-                q_as = [0.05, 0.95]
-                q_gs = [0.05, 0.95]
+                q_as = [0.0, 1.0]
+                q_gs = [0.0, 1.0]
                 for q_a in q_as:
                     for q_g in q_gs:
                         # Q Map
-                        Q_map = ME.SparseTensor(coordinates=torch.cat([torch.zeros((N, 1), device=self.device), points[0]], dim=1), 
-                                                features=torch.cat([torch.ones((N,1), device=self.device) * q_g, torch.ones((N,1), device=self.device) * q_a], dim=1),
-                                                device=source.device)
+                        Q_map = torch.tensor([[q_g, q_a]], device=source.device)
 
                         # Compression
                         strings, shapes, k, coordinates, q_vals = self.model.compress(source, Q_map)

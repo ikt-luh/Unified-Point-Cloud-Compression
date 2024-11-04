@@ -120,8 +120,7 @@ class MeanScaleHyperprior_Map(CompressionModel):
         self.inverse_rescaling = config["inverse_rescaling"]
         self.quantization_mode = config["quantization_mode"]
         
-        #self.eps = 0.01
-        self.eps = 0.0001
+        self.eps = 0.01
         self.quantization_offset = config["quantization_offset"]
         self.entropy_bottleneck = EntropyBottleneck(C_hyper_bottleneck)
         self.gaussian_conditional = GaussianConditional(None)
@@ -169,7 +168,7 @@ class MeanScaleHyperprior_Map(CompressionModel):
         )
         # Compute Quantization offsets from gain and stdev
         self.quant_nn = nn.Sequential(
-            nn.Linear(2, 10),
+            nn.Linear(1, 10),
             nn.ReLU(),
             nn.Linear(10, 10),
             nn.ReLU(),
@@ -193,32 +192,42 @@ class MeanScaleHyperprior_Map(CompressionModel):
             y[0, :, mask] = result
         return y
 
-    def get_offsets(self, stddev, scale):
+    def get_offsets(self, stddev):
         """
         Scale tensor x per batch
         batch_indices : N
         x: 1, C, N
         scale: B, C
         """
-        combined_inputs = torch.cat((scale.unsqueeze(dim=3), stddev.unsqueeze(dim=3)), dim=3)  
-
-        result = self.quant_nn(combined_inputs).squeeze(dim=3)
+        result = self.quant_nn(stddev.unsqueeze(dim=3)).squeeze(3)
 
         return result
 
     def forward(self, y, q):
+        # Scaling
+        y_batch_indices = y.C[:, 0]
+        scale = self.scale_nn(q)
+        scale = scale[y_batch_indices].t().unsqueeze(0)
+        if self.inverse_rescaling:
+            rescale = torch.tensor(1.0) / scale.clone().detach() #TODO: is this a good idea?
+        else:
+            rescale = torch.tensor(1.0) / self.rescale_nn(q)
+            rescale = rescale[y_batch_indices].t().unsqueeze(0)
+        y = ME.SparseTensor(features=y.F * scale[0].T, 
+                                coordinates=y.C,
+                                tensor_stride=8,
+                                device=y.device)
+
         z = self.h_a(y)
 
         z_feats = z.F.t().unsqueeze(0)
         y_feats = y.F.t().unsqueeze(0)
 
-        if self.quantization_mode == "uniform":
-            z_hat, z_likelihoods = self.entropy_bottleneck(z_feats)
-        else:
-            _, z_likelihoods = self.entropy_bottleneck(z_feats)
-            z_offset = self.entropy_bottleneck._get_medians()
-            z_feats = z_feats - z_offset
-            z_hat = ops.quantize_ste(z_feats) + z_offset
+        # Hyperpriors
+        _, z_likelihoods = self.entropy_bottleneck(z_feats)
+        z_offset = self.entropy_bottleneck._get_medians()
+        z_feats = z_feats - z_offset
+        z_hat = ops.quantize_ste(z_feats) + z_offset
 
         # Reconstruct z_hat
         z_hat = ME.SparseTensor(features=z_hat[0].t(), 
@@ -233,57 +242,46 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0) 
 
-        y_batch_indices = y.C[:, 0]
-        scale = self.scale_nn(q) + self.eps
-        scale = scale[y_batch_indices].t().unsqueeze(0)
-        if self.inverse_rescaling:
-            rescale = torch.tensor(1.0) / scale.clone().detach() #TODO: is this a good idea?
-        else:
-            rescale = torch.tensor(1.0) / self.rescale_nn(q)
-            rescale = rescale[y_batch_indices].t().unsqueeze(0)
-
         # Find the right scales
-        if self.quantization_offset:
-            y_feats_tmp = scale * (y_feats - means_hat)
-            signs = torch.sign(y_feats_tmp).detach()
+        y_feats_tmp = y_feats - means_hat
+        signs = torch.sign(y_feats_tmp).detach()
+        y_q_abs = ops.quantize_ste(torch.abs(y_feats_tmp))
 
-            if self.quantization_mode == "uniform":
-                y_q_abs = quantize_noise(torch.abs(y_feats_tmp))
-            else:
-                y_q_abs = ops.quantize_ste(torch.abs(y_feats_tmp))
+        y_q_stdev = self.gaussian_conditional.lower_bound_scale(scale)
 
-            _, y_likelihoods = self.gaussian_conditional(
-                y_feats * scale,
-                scales_hat * scale,
-                means= means_hat * scale
-            )
-            y_q_stdev = self.gaussian_conditional.lower_bound_scale(scales_hat * scale)
+        # Get offsets from stdev and scale (Per element)
+        q_offsets = (-1) * self.get_offsets(y_q_stdev)
+        q_offsets[y_q_abs < 0.0001] = (0)
 
-            # Get offsets from stdev and scale (Per element)
-            q_offsets = (-1) * self.get_offsets(y_q_stdev, scale.clone().detach())
-            q_offsets[y_q_abs < 0.0001] = (0)
-
-            y_hat = signs * (y_q_abs + q_offsets)
-            y_hat = y_hat * rescale + means_hat
-        else:
-            y_hat, y_likelihoods = self.gaussian_conditional(
-                y_feats * scale,
-                scales_hat * scale,
-                means=means_hat * scale
-            )
-            y_hat = y_hat * rescale
-
+        y_hat = signs * (y_q_abs + q_offsets)
+        # Rescaling
+        y_hat = rescale * (y_hat + means_hat)
 
         y_hat = ME.SparseTensor(features=y_hat[0].t(), 
                                 coordinates=y.C,
                                 tensor_stride=8,
                                 device=y.device)
 
+        _, y_likelihoods = self.gaussian_conditional(
+            y_feats,
+            scales_hat,
+            means=means_hat
+        )
+
         return y_hat, None, (y_likelihoods, z_likelihoods)
 
 
 
     def compress(self, y, q):
+        # Scaling
+        y_batch_indices = y.C[:, 0]
+        scale = self.scale_nn(q)
+        scale = scale[y_batch_indices].t().unsqueeze(0)
+
+        y = ME.SparseTensor(features=y.F * scale[0].T, 
+                                coordinates=y.C,
+                                tensor_stride=8,
+                                device=y.device)
         # Hyper analysis
         z = self.h_a(y)
 
@@ -291,10 +289,8 @@ class MeanScaleHyperprior_Map(CompressionModel):
         y = sort_tensor(y)
         z = sort_tensor(z)
 
-        y_batch_indices = y.C[:, 0]
-        # Entropy model
+        # Entropy Bottleneck
         shape = [z.F.shape[0]]
-
         z_strings = self.entropy_bottleneck.compress(z.F.t().unsqueeze(0))
         z_hat_feats = self.entropy_bottleneck.decompress(z_strings, shape)
 
@@ -310,14 +306,11 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0)
 
-        scale = self.scale_nn(q) + self.eps
-        scale = scale[y_batch_indices].t().unsqueeze(0)
-
-        indexes = self.gaussian_conditional.build_indexes(scales_hat * scale)
+        indexes = self.gaussian_conditional.build_indexes(scale)
         y_strings = self.gaussian_conditional.compress(
-            y.F.t().unsqueeze(0) * scale, 
+            y.F.t().unsqueeze(0), 
             indexes, 
-            means=means_hat * scale)
+            means=means_hat)
 
         # Points are needed, to be compressed later
         y_points = y.C
@@ -332,14 +325,13 @@ class MeanScaleHyperprior_Map(CompressionModel):
     def decompress(self, points, strings, shape, q):
         assert isinstance(strings, list) and len(strings) == 2
 
-
         # Get the points back
         y_points, z_points = points[0], points[1]
         y_points = sort_points(y_points)
         z_points = sort_points(z_points)
         y_strings, z_strings = strings[0], strings[1]
 
-        y_batch_indices = y_points[:, 0].int()
+        y_batch_indices = y_points[:, 0]
 
         z_hat_feats = self.entropy_bottleneck.decompress(z_strings, shape)
         z_hat = ME.SparseTensor(features=z_hat_feats[0].t(),
@@ -354,31 +346,25 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0)
 
-        scale = self.scale_nn(q) + self.eps
-        scale = scale[y_batch_indices].t().unsqueeze(0)
-        if self.inverse_rescaling:
-            rescale = torch.tensor(1.0) / scale
-        else:
-            rescale = torch.tensor(1.0) / self.rescale_nn(q) 
-            rescale = rescale[y_batch_indices].t().unsqueeze(0)
 
-        indexes = self.gaussian_conditional.build_indexes(scales_hat * scale)
-        if self.quantization_offset:
-            q_val = self.gaussian_conditional.decompress(y_strings, indexes)
-            q_abs, signs = q_val.abs(), torch.sign(q_val)
+        indexes = self.gaussian_conditional.build_indexes(scales_hat)
+        q_val = self.gaussian_conditional.decompress(y_strings, indexes)
+        q_abs, signs = q_val.abs(), torch.sign(q_val)
 
-            #Quantization offset
-            y_q_stdev = self.gaussian_conditional.lower_bound_scale(scales_hat * scale)
+        #Quantization offset
+        y_q_stdev = self.gaussian_conditional.lower_bound_scale(scales_hat)
 
-            # Get offsets from stdev and scale (Per element)
-            q_offsets = (-1) * self.get_offsets(y_q_stdev, scale)
-            q_offsets[q_abs < 0.0001] = (0)
+        # Get offsets from stdev and scale (Per element)
+        q_offsets = (-1) * self.get_offsets(y_q_stdev)
+        q_offsets[q_abs < 0.0001] = (0)
         
-            y_hat = signs * (q_abs + q_offsets)
-            y_hat = y_hat * rescale + means_hat
-        else:
-            y_hat = self.gaussian_conditional.decompress(y_strings, indexes, means=means_hat * scale)
+        y_hat = signs * (q_abs + q_offsets)
+        y_hat = y_hat + means_hat
 
+        # Rescaling
+        rescale = torch.tensor(1.0) / self.rescale_nn(q) 
+        rescale = rescale[y_batch_indices].t().unsqueeze(0)
+        y_hat = y_hat * rescale
         y_hat = ME.SparseTensor(features=y_hat[0].t(),
                                 coordinates=y_points,
                                 tensor_stride=8,

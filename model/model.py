@@ -8,12 +8,9 @@ import subprocess
 import open3d as o3d
 from bitstream import BitStream
 
-#from .entropy_models import *
-#from .transforms import *
-
 from .entropy_models2 import *
+#from .entropy_models3 import *
 from .transforms3 import *
-#from .transforms4 import *
 
 import utils
 
@@ -162,22 +159,15 @@ class ColorModel(CompressionModel):
             
 
             # Analysis Transform
-            Q_block = ME.SparseTensor(coordinates=input_block.C,
-                                      features=Q.features_at_coordinates(input_block.C.float()))
-            y, q_vals, k = self.g_a(input_block, Q_block)
+            y, q_vals, k = self.g_a(input_block, Q)
 
             # Entropy Bottleneck Compression
             #_ , strings, shape = self.entropy_model.compress(y)        
 
             # MOO Compression
-            num_batches = torch.max(y.C[:, 0]) + 1
-            q_value = torch.zeros((num_batches, 2), device=y.device)
-            for i in range(num_batches):
-                mask = (Q_block.C[:, 0] == i)
-                q_value[i] = torch.mean(Q_block.F[mask], dim=0)
-            q = q_value.unsqueeze(0)
-            _ , strings, shape = self.entropy_model.compress(y, q)
-            block_q_vals.append(q)
+            print(Q)
+            _ , strings, shape = self.entropy_model.compress(y, Q)
+            block_q_vals.append(Q)
 
             block_coordinates.append(y.C)  # Save block coordinates
             block_shapes.append(shape)
@@ -298,8 +288,8 @@ class ColorModel(CompressionModel):
             # Shape
             stream.write(shape, np.int32)
             stream.write(len(points_bitstream), np.int32)
-            stream.write(q[0, 0, 0].cpu(), np.float64)
-            stream.write(q[0, 0, 1].cpu(), np.float64)
+            stream.write(q[0, 0].cpu(), np.float64)
+            stream.write(q[0, 1].cpu(), np.float64)
 
             # String lengths
             for string in strings:
@@ -363,7 +353,7 @@ class ColorModel(CompressionModel):
             # Read the block header
             shape = [int(stream.read(np.uint32))]
             len_points_bitstream = stream.read(np.uint32)
-            q_vals = torch.tensor([stream.read(np.float64), stream.read(np.float64)]).reshape(1,1,2)
+            q_vals = torch.tensor([stream.read(np.float64), stream.read(np.float64)]).reshape(1,2)
             len_string_1 = stream.read(np.uint32)
             len_string_2 = stream.read(np.uint32)
             string_lengths = [len_string_1, len_string_2]
