@@ -21,25 +21,27 @@ bottom = .16
 left = .22
 right = .97
 runs = {
-    "L2" : "Balle_MOO_5",
+    #"L2" : "Balle_MOO_5",
+    "L2" : "Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn",
     "YOGA" : "YOGA",
     "G-PCC" : "G-PCC",
-    "V-PCC" : "V-PCC",
+    #"V-PCC" : "V-PCC",
     "DeepPCC" : "DeepPCC",
     "IT-DL-PCC" : "IT-DL-PCC",
 
-    "L2_log" : "Final_quad_shepard",
+    #"L2_log" : "Final_quad_shepard",
     #"L2_log" : "Ours_quad",
 }
 
 bd_points = {
-    "L2" : [(0.05, 0.05), (0.1, 0.1), (0.2, 0.2), (0.3, 0.4), (0.4, 0.5), (0.5, 0.7), (0.6, 0.9), ],
+    #"L2" : [(0.0, 0.0), (0.1, 0.1), (0.2, 0.2), (0.4, 0.4), (0.4, 0.6), (0.6, 0.8), (0.6, 1.0), ],
+    "L2" : [(0.0, 0.0), (0.1, 0.1), (0.2, 0.2), (0.2, 0.4),  (1.0, 1.0), ],
     "L2_log" : [(0.05, 0.05), (0.1, 0.1), (0.2, 0.2), (0.4, 0.4), (1, 1)],
-    "G-PCC" : [(0.25, 46), (0.5, 40), (0.75, 34), (0.875, 28)], #last: (0.9375, 22) """(0.125, 51), ""
+    "G-PCC" : [(0.5, 40), (0.75, 34), (0.875, 28), (0.9375, 22)], #last:  """(0.125, 51), (0.25, 46), ""
 
     "V-PCC" : [(32,42), (28, 37), (24, 32), (20, 27), (16, 22)],
     "DeepPCC" : [(1, 1), (2, 2), (3, 3), (4, 4)],
-    "IT-DL-PCC" : [(0, 0.004), (0, 0.002), (0, 0.001), (0, 0.0005)],
+    "IT-DL-PCC" : [(0.004, 0.0), (0.002, 0.0), (0.001, 0.0), (0.0005, 0.0), (0.00025, 0.0)],
 }
 pareto_ranges = {
     "longdress":{
@@ -129,7 +131,7 @@ def plot_experiments():
     #compute_bd_deltas(data)
     
     # Timing
-    compute_times(data)
+    #compute_times(data)
 
     # Plot All data separately
     pareto_data = {}
@@ -184,14 +186,8 @@ def plot_settings(dataframe, pareto_dataframe, key):
             z = df[metric].values
             z_interp = griddata((x, y), z, (X,Y), method="linear")
 
-            fig = plt.figure(figsize=(4, 3))
-            #ax = fig.add_subplot(111, projection="3d")
-            #ax.plot_surface(X, Y, z_interp)
-            #ax.set_xlabel("q_a")
-            #ax.set_ylabel("q_g")
-            #ax.set_zlabel(metric)
-            #ax.set_ylim(0, 1)
-            #ax.set_xlim(0, 1)
+            fig = plt.figure(figsize=(16, 12))
+
 
             ax = fig.add_subplot(111)
             ranges = {
@@ -205,9 +201,6 @@ def plot_settings(dataframe, pareto_dataframe, key):
             levels = np.arange(min, max+step, step)
             bar_levels = np.arange(min, max+bar_step, bar_step)
 
-            #cs = ax.contour(X, Y, z_interp, 10, linestyles=":", colors="grey")
-            #cs2 = ax.contourf(X, Y, z_interp, 10, cmap=cm.summer)
-            cs = ax.contour(X, Y, z_interp, 10, levels=levels, linestyles=":", colors="grey")
             cs2 = ax.contourf(X, Y, z_interp, 10, levels=levels, cmap=cm.summer)
             ax.plot(pareto_df["q_a"], pareto_df["q_g"], color=run_colors[key], marker="o", label=labels[key])
 
@@ -225,8 +218,8 @@ def plot_settings(dataframe, pareto_dataframe, key):
             cbar.ax.set_ylabel(metric_labels[metric])
             
             ticklabels = 18
-            ax.tick_params(axis='both', which='major', labelsize=ticklabels)
-            cbar.ax.tick_params(axis='both', which='major', labelsize=ticklabels)
+            ax.tick_params(axis='both', which='major', )
+            cbar.ax.tick_params(axis='both', which='major', )
 
 
             fig.tight_layout()
@@ -249,7 +242,7 @@ def plot_pareto_figs_single(dataframe, key):
             ax.set_xlabel("bpp")
             ax.set_ylabel(metric)
             ax.grid(visible=True)
-            ax.tick_params(axis='both', which='major', labelsize=22)
+            ax.tick_params(axis='both', which='major', )
 
             path = os.path.join(plots, key, "rd-pareto_{}_{}.pdf".format(metric, sequence))
             #fig.tight_layout()
@@ -288,11 +281,10 @@ def plot_pareto_figs_all(pareto_dataframe):
                 ax.plot(bpp, y, 
                         label=labels[method],
                         linestyle=linestyles[method],
-                        linewidth=3,
                         color=run_colors[method])
                 ax.set_xlabel(r"bpp")
                 ax.set_ylabel(metric_labels[metric])
-                ax.tick_params(axis='both', which='major', labelsize=22)
+                ax.tick_params(axis='both', which='major', )
 
         for key, items in figs.items():
             fig, ax = items
@@ -307,7 +299,7 @@ def plot_pareto_figs_all(pareto_dataframe):
             plt.close(fig)
         
 def filter_config_points(data, config):
-    tolerance = 1e-2
+    tolerance = 1e-5
 
     mask = np.full(len(data), False)
     for q_g_test, q_a_test in config:
@@ -338,13 +330,16 @@ def plot_rd_figs_all(dataframes):
                 if sequence in figs.keys():
                     fig, ax = figs[sequence]
                 else:
-                    fig = plt.figure()
+                    fig = plt.figure(figsize=(2.5, 2))
                     ax = fig.add_subplot(111)
                     figs[sequence] = (fig, ax)
 
                 data = df[df["sequence"]== sequence]
                 settings = bd_points[method]
                 filtered_data = filter_config_points(data, settings)
+                if method == "L2":
+                    print(settings)
+                    print(filtered_data)
 
                 bpp = filtered_data["bpp"]
                 y = filtered_data[metric]
@@ -355,21 +350,16 @@ def plot_rd_figs_all(dataframes):
                 ax.plot(x_dat, y_dat, 
                         label=labels[method],
                         linestyle=linestyles[method],
-                        linewidth=3,
                         color=run_colors[method])
                 ax.scatter(x_scat, y_scat, 
-                        s=40,
+                        s=20,
                         marker=markers[method],
                         color=run_colors[method])
                 ax.set_xlabel(r"bpp")
                 ax.set_ylabel(metric_labels[metric])
-                ax.tick_params(axis='both', which='major', labelsize=22)
-                """
-                if metric == "pcqm":
-                    ax.set_ylim([0.98, 0.9975])
-                if metric == "sym_y_psnr" and sequence == "andrew9":
-                    ax.set_ylim([16, 32])
-                """
+                ax.tick_params(axis='both', which='major')
+                ax.xaxis.set_label_coords(0.5, -0.12)
+                ax.yaxis.set_label_coords(-0.2, 0.5)
                 
 
         for key, items in figs.items():

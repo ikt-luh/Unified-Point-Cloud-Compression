@@ -663,6 +663,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
             './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(q_g),
             '{}'.format(path),
             '--scale=1',
+            '--use_fast_topk'
             '--blk_size=256',
         ]
         t0 = time.time()
@@ -676,6 +677,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
 
         command = ['python3', './dependencies/IT-DL-PCC/src/IT-DL-PCC.py',
             '--with_color',
+            '--cuda',
             'decompress',
             '{}'.format(bin_dir),
             './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(q_g)

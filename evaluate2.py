@@ -30,9 +30,9 @@ norm = Normalize(vmin=0.0, vmax=10**(-2))
 base_path = "./results"
 data_path = "./data/datasets/full_128" 
 ref_paths = {
+     "loot" : "./data/datasets/8iVFB/loot_vox10_1200.ply",
      "longdress" : "./data/datasets/8iVFB/longdress_vox10_1300.ply",
      "soldier" : "./data/datasets/8iVFB/soldier_vox10_0690.ply",
-     "loot" : "./data/datasets/8iVFB/loot_vox10_1200.ply",
      "redandblack" : "./data/datasets/8iVFB/redandblack_vox10_1550.ply",
 
      "basketball_player" : "./data/datasets/Owlii/basketball_player_vox11_00000200.ply",
@@ -44,12 +44,10 @@ ref_paths = {
      #"bouquet" : "./data/datasets/raw/jpeg_testset/RWT130Bouquet.ply",
      #"stmichael" : "./data/datasets/raw/jpeg_testset/RWT70StMichael.ply",
      #"soldier" : "./data/datasets/raw/jpeg_testset/soldier_vox10_0690.ply",
-
      #"boxer" : "./data/datasets/raw/jpeg_testset/boxer_viewdep_vox12.ply",
      #"House" : "./data/datasets/raw/jpeg_testset/House_without_roof_00057_vox12.ply",
      #"CITISUP" : "./data/datasets/raw/jpeg_testset/CITIUSP_vox13.ply",
      #"Facade" : "./data/datasets/raw/jpeg_testset/Facade_00009_vox12.ply",
-
      #"EPFL" : "./data/datasets/raw/jpeg_testset/EPFL_vox13.ply",
      #"Arco" : "./data/datasets/raw/jpeg_testset/Arco_Valentino_Dense_vox12.ply",
      #"shiva" : "./data/datasets/raw/jpeg_testset/Shiva_00035_vox12.ply",
@@ -60,7 +58,6 @@ resolutions ={
      "soldier" : 1023, 
      "loot" : 1023, 
      "redandblack" : 1023, 
-
      "basketball_player" : 2047, 
      "dancer" : 2047, 
      "model" : 2047, 
@@ -69,12 +66,10 @@ resolutions ={
      "boxer" : 4095,
      "thaidancer" : 4095,
      "bouquet" : 1023,
-
      "stmichael" : 1023,
      "CITISUP" : 8191,
      "EPFL" : 8191,
      "Facade" : 4095,
-
      "House" : 4095,
      "shiva" : 4095,
      "Unicorn" : 8191,
@@ -86,20 +81,18 @@ block_sizes ={
      "loot" : 1024, 
      "redandblack" : 1024, 
 
-     "model" : 2048, 
-     "exercise" : 2048, 
-     "dancer" : 2048, 
-     "basketball_player" : 2048, 
+     "model" : 512, 
+     "exercise" : 512, 
+     "dancer" : 512, 
+     "basketball_player" : 512, 
 
      "boxer" : 512,
      "thaidancer" : 512,
      "bouquet" : 512,
-
      "stmichael" : 1024,
      "CITISUP" : 512,
      "EPFL" : 512,
      "Facade" : 512,
-
      "House" : 512,
      "shiva" : 1024,
      "Unicorn" : 1024,
@@ -107,14 +100,14 @@ block_sizes ={
 }
 
 
-device_id = 0
+device_id = 1
 experiments = [
     #"Ours",
     #"V-PCC",
     #"G-PCC",
-    #"IT-DL-PCC",
+    "IT-DL-PCC",
 
-    "Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn"
+    #"Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn"
     ]
 
 related_work = [
@@ -139,10 +132,10 @@ def run_testset(experiments):
 
         # Set model and QPs
         if experiment not in related_work:
-            #q_as = np.arange(6) * 0.2
-            #q_gs = np.arange(6) * 0.2
-            q_as = np.arange(21) * 0.05
-            q_gs = np.arange(21) * 0.05
+            q_as = np.arange(6) * 0.2
+            q_gs = np.arange(6) * 0.2
+            #q_as = np.arange(21) * 0.05 
+            #q_gs = np.arange(21) * 0.05
 
             weight_path = os.path.join(base_path, experiment, "weights.pt")
             config_path = os.path.join(base_path, experiment, "config.yaml")
@@ -207,8 +200,23 @@ def run_testset(experiments):
                                                                                                 q_g,
                                                                                                 base_path)
 
+                        # Renders of the pointcloud
+                        point_size = 1.0 if sequence in ["longdress", "soldier", "loot", "longdress"] else 2.0
+                        path = os.path.join(base_path,
+                                            experiment, 
+                                            "renders_test",
+                                            "{}_a{}_g{}_{}.png".format(sequence, str(q_a), str(q_g), "{}"))
+                        utils.render_pointcloud(rec_pc, path, point_size=point_size)
+
+                        # Renders of the original
+                        path = os.path.join(base_path,
+                                            experiment, 
+                                            "renders_test",
+                                            "{}_original_{}.png".format(sequence, "{}"))
+                        utils.render_pointcloud(source_pc, path, point_size=point_size)
                         tmp_path = os.path.join(base_path,
                                                 experiment)
+
                         rec_pc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamRadius(radius=5.0))
                         results = utils.pc_metrics(ref_path, 
                                                      rec_pc, 
@@ -245,20 +253,6 @@ def run_testset(experiments):
                                                                                                                                results["pcqm"],
                                                                                                                                results["bpp"],
                                                                                                                                t_compress + t_decompress))
-                        # Renders of the pointcloud
-                        point_size = 1.0 if sequence in ["longdress", "soldier", "loot", "longdress"] else 2.0
-                        path = os.path.join(base_path,
-                                            experiment, 
-                                            "renders_test",
-                                            "{}_a{}_g{}_{}.png".format(sequence, str(q_a), str(q_g), "{}"))
-                        utils.render_pointcloud(rec_pc, path, point_size=point_size)
-
-                        # Renders of the original
-                        path = os.path.join(base_path,
-                                            experiment, 
-                                            "renders_test",
-                                            "{}_original_{}.png".format(sequence, "{}"))
-                        utils.render_pointcloud(source_pc, path, point_size=point_size)
                         """
                         fig, ax = plt.subplots(figsize=(2, 4), layout='constrained')
                         cbar = fig.colorbar(ScalarMappable(norm=norm, cmap="magma"),

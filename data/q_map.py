@@ -175,9 +175,11 @@ class Q_Map(object):
         batch_indices = torch.unique(geometry.C[:, 0])
 
         q_map = torch.zeros((torch.max(batch_indices)+1, 2), device=geometry.device)
-        for batch_idx in batch_indices:
-            q_map[batch_idx, 0] = random.uniform(0, 1)
-            q_map[batch_idx, 1] = random.uniform(0, 1)
+        #for batch_idx in batch_indices:
+            #q_map[batch_idx, 0] = random.uniform(0, 1)
+            #q_map[batch_idx, 1] = random.uniform(0, 1)
+        q_map[:, 0] = random.uniform(0, 1)
+        q_map[:, 1] = random.uniform(0, 1)
 
         # Scale 
         lambda_map = self.scale_q_map(q_map)

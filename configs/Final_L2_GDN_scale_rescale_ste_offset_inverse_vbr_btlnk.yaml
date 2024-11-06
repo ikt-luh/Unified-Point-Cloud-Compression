@@ -1,5 +1,5 @@
 ## General
-experiment_name: "CVPR_inverse_scaling"
+experiment_name: "Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn_vbr_btlnk"
 results_path : "./results"
 
 # Model
@@ -9,7 +9,7 @@ model:
     C_bottleneck: 128
     C_hyper_bottleneck: 192
     quantization_mode: "ste"
-    inverse_rescaling: True
+    inverse_rescaling: False
     quantization_offset: True
     entropy_bottleneck_vbr: False
   g_a: 
@@ -46,7 +46,7 @@ q_map:
   mode: "quadratic"
 
 ## Training
-device: "2"
+device: "0"
 epochs: 300
 batch_size: 8
 virtual_batches: false

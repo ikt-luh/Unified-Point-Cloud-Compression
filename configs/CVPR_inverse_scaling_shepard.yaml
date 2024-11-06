@@ -1,5 +1,5 @@
 ## General
-experiment_name: "CVPR_inverse_scaling"
+experiment_name: "CVPR_inverse_scaling_shepard"
 results_path : "./results"
 
 # Model
@@ -46,7 +46,7 @@ q_map:
   mode: "quadratic"
 
 ## Training
-device: "2"
+device: "1"
 epochs: 300
 batch_size: 8
 virtual_batches: false
@@ -64,8 +64,10 @@ loss:
     alpha: 0.5
     gamma: 2.0
   ColorLoss:
-    type: "ColorLoss"
+    type: "ShepardsLoss"
     loss: "L2"
+    window_size: 9
+    p: 8
   bpp-y:
     type: "BPPLoss"
     key: "y"

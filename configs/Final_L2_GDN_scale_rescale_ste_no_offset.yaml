@@ -1,5 +1,5 @@
 ## General
-experiment_name: "Final_L2_GDN_scale_rescale_ste_no_offset"
+experiment_name: "Final_L2_GDN_scale_rescale_ste_no_offset_2"
 results_path : "./results"
 
 # Model

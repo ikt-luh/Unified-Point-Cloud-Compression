@@ -29,6 +29,7 @@ model:
     C_hyper_bottleneck: 384
     inverse_rescaling: false
     quantization_mode: ste
+    entropy_bottleneck_vbr: False
     quantization_offset: true
     type: MeanScaleHyperprior_map
   g_a:

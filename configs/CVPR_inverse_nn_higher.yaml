@@ -1,5 +1,5 @@
 ## General
-experiment_name: "CVPR_inverse_scaling"
+experiment_name: "CVPR_inverse_nn_higher"
 results_path : "./results"
 
 # Model
@@ -9,7 +9,7 @@ model:
     C_bottleneck: 128
     C_hyper_bottleneck: 192
     quantization_mode: "ste"
-    inverse_rescaling: True
+    inverse_rescaling: False
     quantization_offset: True
     entropy_bottleneck_vbr: False
   g_a: 
@@ -40,13 +40,13 @@ transforms:
 #Q_Map
 q_map:
   lambda_A_min: 0
-  lambda_A_max: 12800
+  lambda_A_max: 25600
   lambda_G_min: 0
   lambda_G_max: 200
   mode: "quadratic"
 
 ## Training
-device: "2"
+device: "1"
 epochs: 300
 batch_size: 8
 virtual_batches: false

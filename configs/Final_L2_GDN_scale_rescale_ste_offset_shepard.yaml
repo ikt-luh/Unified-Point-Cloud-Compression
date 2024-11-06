@@ -1,5 +1,5 @@
 ## General
-experiment_name: "Final_L2_GDN_scale_rescale_ste_offsets_shepard"
+experiment_name: "Final_L2_GDN_scale_rescale_ste_offsets_shepard_2"
 results_path : "./results"
 
 # Model
@@ -11,6 +11,7 @@ model:
     quantization_mode: "ste"
     inverse_rescaling: False
     quantization_offset: True
+    entropy_bottleneck_vbr: False
   g_a: 
     C_in: 4
     N1: 128
