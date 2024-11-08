@@ -165,7 +165,6 @@ class ColorModel(CompressionModel):
             #_ , strings, shape = self.entropy_model.compress(y)        
 
             # MOO Compression
-            print(Q)
             _ , strings, shape = self.entropy_model.compress(y, Q)
             block_q_vals.append(Q)
 
@@ -356,8 +355,6 @@ class ColorModel(CompressionModel):
             q_vals = torch.tensor([stream.read(np.float64), stream.read(np.float64)]).reshape(1,2)
             len_string_1 = stream.read(np.uint32)
             len_string_2 = stream.read(np.uint32)
-            print(len_string_1)
-            print(len_string_2)
             string_lengths = [len_string_1, len_string_2]
             k1 = [stream.read(np.uint32)]
             k2 = [stream.read(np.uint32)]

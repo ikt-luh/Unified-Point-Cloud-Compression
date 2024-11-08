@@ -46,11 +46,12 @@ def create_image_composition(image_path, bounding_box, cutout1, cutout2):
     draw = ImageDraw.Draw(final_image)
     
     # Draw a red box around the original cropped image position
-    draw.rectangle(cutout1, outline="red", width=4)
-    draw.rectangle(cutout2, outline="blue", width=4)
+    linewidth = 8
+    draw.rectangle(cutout1, outline="red", width=linewidth)
+    draw.rectangle(cutout2, outline="blue", width=linewidth)
 
-    draw.rectangle((width, 0, width*2, width), outline="red", width=8)
-    draw.rectangle((width, width, width*2, width*2), outline="blue", width=8)
+    draw.rectangle((width, 0, width*2, width), outline="red", width=linewidth*2)
+    draw.rectangle((width, width, width*2, width*2), outline="blue", width=linewidth*2)
     
     return final_image
 
@@ -58,16 +59,15 @@ def create_image_composition(image_path, bounding_box, cutout1, cutout2):
 
 settings = {
     "original": ("original"),
-    #"Ours": (0.1, 0.1),
-    "G-PCC": (22, 0.9375),
-    #"IT-DL-PCC": (0.1, 0.3)
-    "Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn": (0.8, 0.4)
+    "G-PCC": (34, 0.75),
+    "IT-DL-PCC": (0, 0.002),
+    "CVPR_inverse_scaling": (0.2, 0.2)
 }
 
 # Sequence ((Bounding Box), Cutout1, Cutout2)
 # Boxes are defined by (x,y,sizex,sizey)
 sequences = {
-    "longdress": ((780, 180, 400), (120, 10, 120), (150, 200, 120), "top")
+    "longdress": ((780, 190, 350), (125, 30, 80), (150, 190, 80), "top")
 }
 path_skeleton = "./results/{}/renders_test/{}_a{}_g{}_{}.png"
 results_dir = "./plot/images"

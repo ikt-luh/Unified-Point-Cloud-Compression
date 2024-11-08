@@ -10,136 +10,45 @@ import pandas as pd
 import numpy as np
 
 from plot import style
+from plot.style import runs, metric_labels
 
 # Runs
 path = "./results"
 plots = "./plot/figures"
 metrics = ["pcqm", "sym_y_psnr", "sym_p2p_psnr", "sym_yuv_psnr"]
-related_work = ["YOGA"]
-top = .97
-bottom = .16
-left = .22
-right = .97
-runs = {
-    #"L2" : "Balle_MOO_5",
-    "L2" : "Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn",
-    "YOGA" : "YOGA",
-    "G-PCC" : "G-PCC",
-    #"V-PCC" : "V-PCC",
-    "DeepPCC" : "DeepPCC",
-    "IT-DL-PCC" : "IT-DL-PCC",
 
-    #"L2_log" : "Final_quad_shepard",
-    #"L2_log" : "Ours_quad",
-}
+sota_comparison = ["CVPR_inverse_scaling", "G-PCC", "IT-DL-PCC", "DeepPCC", "YOGA"]
+ablation_scaling = ["CVPR_inverse_scaling", "Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn_vbr_btlnk"]
+ablation_loss = ["CVPR_inverse_scaling", "CVPR_inverse_scaling_shepard"]
 
-bd_points = {
-    #"L2" : [(0.0, 0.0), (0.1, 0.1), (0.2, 0.2), (0.4, 0.4), (0.4, 0.6), (0.6, 0.8), (0.6, 1.0), ],
-    "L2" : [(0.0, 0.0), (0.1, 0.1), (0.2, 0.2), (0.2, 0.4),  (1.0, 1.0), ],
-    "L2_log" : [(0.05, 0.05), (0.1, 0.1), (0.2, 0.2), (0.4, 0.4), (1, 1)],
-    "G-PCC" : [(0.5, 40), (0.75, 34), (0.875, 28), (0.9375, 22)], #last:  """(0.125, 51), (0.25, 46), ""
+datasets = {"8iVFBv2": ["soldier", "longdress", "loot", "redandblack", "8iVFBv2"],
+            "Owlii": ["exercise", "model", "exercise", "basketball_player", "Owlii"]}
 
-    "V-PCC" : [(32,42), (28, 37), (24, 32), (20, 27), (16, 22)],
-    "DeepPCC" : [(1, 1), (2, 2), (3, 3), (4, 4)],
-    "IT-DL-PCC" : [(0.004, 0.0), (0.002, 0.0), (0.001, 0.0), (0.0005, 0.0), (0.00025, 0.0)],
-}
-pareto_ranges = {
-    "longdress":{
-        "bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70],
-    },
-    "soldier":{
-        "bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 35], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
-    },
-    "loot":{
-        "bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [24, 36], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
-    },
-    "redandblack":{
-        "bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [24, 32], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [60, 70],
-    },
-    "sarah9":{
-        "bpp": [0.0, 0.9975], "pcqm": [0.985, 0.9975], "sym_y_psnr": [0.98, 1.00], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [0.98, 1.00],
-    },
-    "david9":{
-        "bpp": [0.0, 0.9975], "pcqm": [0.985, 0.9975], "sym_y_psnr": [0.98, 1.00], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [0.98, 1.00],
-    },
-    "andrew9":{
-        "bpp": [0.0, 0.9975], "pcqm": [0.985, 0.9975], "sym_y_psnr": [0.98, 1.00], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [0.98, 1.00],
-    },
-    "phil9":{
-        "bpp": [0.0, 0.9975], "pcqm": [0.985, 0.9975], "sym_y_psnr": [0.98, 1.00], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [0.98, 1.00],
-    },
-}
-
-metric_labels = {
-    "bpp" : r"bpp",
-    "pcqm" : r"$1 -$ PCQM",
-    "sym_y_psnr" : r"Y-PSNR [dB]",
-    "sym_yuv_psnr" : r"YUV-PSNR [dB]",
-    "sym_p2p_psnr" : r"D1-PSNR [dB]",
-}
-
-run_colors = {
-    "L2" : style.colors[0],
-    "G-PCC" : style.colors[2],
-    "V-PCC" : style.colors[1],
-    "YOGA" : style.colors[4],
-    "DeepPCC" : style.colors[3],
-    "IT-DL-PCC" : style.colors[1],
-
-    "L2_log" : style.colors[5],
-    "SSIM" : style.colors[1],
-}
-linestyles = {
-    "L2" : style.linestyles[0],
-    "G-PCC" : style.linestyles[2],
-    "V-PCC" : style.linestyles[1],
-    "YOGA" : style.linestyles[4],
-    "DeepPCC" : style.linestyles[3],
-    "IT-DL-PCC" : style.linestyles[0],
-
-    "L2_log" : style.linestyles[0],
-    "SSIM" : style.linestyles[1],
-}
-markers = {
-    "L2" : style.markers[0],
-    "G-PCC" : style.markers[2],
-    "V-PCC" : style.markers[1],
-    "YOGA" : style.markers[4],
-    "DeepPCC" : style.markers[3],
-    "IT-DL-PCC" : style.markers[0],
-
-    "L2_log" : style.markers[1],
-    "SSIM" : style.markers[1],
-}
-labels = {
-    "L2" : "Ours",
-    "L2_log" : "Ours_quad",
-    "SSIM" : "Ours ($SSIM$)",
-    "G-PCC" : "G-PCC",# (tmc13 v23)",
-    "V-PCC" : "V-PCC", #(tmc2 v24)",
-    "YOGA" : "YOGA",
-    "DeepPCC" : "DeepPCC",
-    "IT-DL-PCC": "IT-DL-PCC"
-}
 def plot_experiments():
     """
     Level 0 : Plot all results
     """
-    data = load_csvs()
-
-    plot_rd_figs_all(data)
-    #compute_bd_deltas(data)
+    # SotA Comparison
+    data = load_csvs(sota_comparison)
+    plot_rd_figs_all(data, "sota_comparison")
+    
+    # TODO
+    #compute_bd_deltas(data, sota_comparison, "CVPR_inverse_scaling", "sota_comparison")
     
     # Timing
-    #compute_times(data)
-
-    # Plot All data separately
+    # Plot per run results
     pareto_data = {}
     for key, dataframe in data.items():
         pareto_df = plot_per_run_results(dataframe, key)
         pareto_data[key] = pareto_df
 
-    plot_all_results(data, pareto_data)
+    # Scaling Comparison
+    data = load_csvs(ablation_scaling)
+    plot_rd_figs_all(data, "ablation_scaling")
+
+    # Loss Comparison
+    data = load_csvs(ablation_loss)
+    plot_rd_figs_all(data, "ablation_loss")
 
 
 def plot_per_run_results(dataframe, key):
@@ -155,10 +64,7 @@ def plot_per_run_results(dataframe, key):
     # Filter df for pareto fron
     pareto_df = get_pareto_df(dataframe)
 
-    if key in related_work:
-        return pareto_df
-
-    plot_pareto_figs_single(pareto_df, key)
+    #plot_pareto_figs_single(pareto_df, key)
     plot_settings(dataframe, pareto_df, key)
 
     return pareto_df
@@ -173,6 +79,9 @@ def plot_all_results(dataframe, pareto_dataframe):
 
 
 def plot_settings(dataframe, pareto_dataframe, key):
+    if key in ["IT-DL-PCC", "G-PCC", "DeepPCC"]:
+        return # No pareto fronts for this
+
     metrics = ["pcqm", "bpp", "sym_y_psnr", "sym_p2p_psnr"]
     for sequence in dataframe["sequence"].unique():
         df = dataframe[dataframe["sequence"]== sequence].sort_values(by=["q_a", "q_g"])
@@ -186,23 +95,37 @@ def plot_settings(dataframe, pareto_dataframe, key):
             z = df[metric].values
             z_interp = griddata((x, y), z, (X,Y), method="linear")
 
-            fig = plt.figure(figsize=(16, 12))
-
-
+            fig = plt.figure(figsize=(2.5, 2))
             ax = fig.add_subplot(111)
+
             ranges = {
-                "bpp": [0.0, 1], "pcqm": [0.985, 0.9975], "sym_y_psnr": [22, 38], "sym_yuv_psnr": [0.98, 1.00], "sym_p2p_psnr": [62, 78],
+                "bpp": [0.0, 1.8], "pcqm": [0.986, 0.998], "sym_y_psnr": [22, 40], "sym_yuv_psnr": [26, 46], "sym_p2p_psnr": [64, 80],
             }
-            num_levels = {"bpp": 0.1, "pcqm": 0.001, "sym_yuv_psnr": 5, "sym_y_psnr": 2, "sym_p2p_psnr": 2}
-            num_levels_bar = {"bpp": 0.2, "pcqm": 0.001, "sym_yuv_psnr": 5, "sym_y_psnr": 4, "sym_p2p_psnr": 4}
+
+            num_levels = {"bpp": 0.1, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 2, "sym_p2p_psnr": 2}
+            num_levels_bar = {"bpp": 0.2, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 2, "sym_p2p_psnr": 4}
             min, max = ranges[metric]
             step = num_levels[metric]
             bar_step = num_levels_bar[metric]
             levels = np.arange(min, max+step, step)
             bar_levels = np.arange(min, max+bar_step, bar_step)
 
-            cs2 = ax.contourf(X, Y, z_interp, 10, levels=levels, cmap=cm.summer)
-            ax.plot(pareto_df["q_a"], pareto_df["q_g"], color=run_colors[key], marker="o", label=labels[key])
+            # Pareto in countour
+            cs2 = ax.contourf(X, Y, z_interp, 10, levels=levels, cmap=cm.cool, extend='min')
+            if key in "YOGA":
+                ax.plot(pareto_df["q_a"]/20, pareto_df["q_g"]/20, color=runs[key]["colors"], marker="x", clip_on=False)
+            else: 
+                ax.plot(pareto_df["q_a"], pareto_df["q_g"], color=runs[key]["colors"], marker="x", clip_on=False)
+
+            # Add Settings
+            settings = runs[key]["bd_points"]
+            if isinstance(settings, dict):
+                settings = settings["8i"] if sequence in datasets["8iVFBv2"] or sequence=="8iVFBv2" else settings["Owlii"]
+            for q_a, q_g in settings:
+                if key == "YOGA":
+                    q_a = q_a/20
+                    q_g = q_g/20
+                ax.scatter(q_a, q_g, s=40, edgecolors="red", marker="o", facecolors="none", linewidth=2, clip_on=False, label="Choosen configuraiton")
 
             ax.set_xlabel(r"$q^{(A)}$")
             ax.set_ylabel(r"$q^{(G)}$", rotation=0, ha="right", va="center")
@@ -210,22 +133,53 @@ def plot_settings(dataframe, pareto_dataframe, key):
             ax.set_xlim(0, 1)
             ax.set_xticks([0, 1])
             ax.set_yticks([0, 1])
-            #ax.legend(fontsize=16)
-            ax.xaxis.set_label_coords(0.5, -0.05)
-            ax.yaxis.set_label_coords(-0.05, 0.5)
+            ax.xaxis.set_label_coords(0.5, -0.03)
+            ax.yaxis.set_label_coords(-0.03, 0.5)
 
             cbar = fig.colorbar(cs2, boundaries=levels, ticks=bar_levels)
             cbar.ax.set_ylabel(metric_labels[metric])
             
-            ticklabels = 18
             ax.tick_params(axis='both', which='major', )
             cbar.ax.tick_params(axis='both', which='major', )
-
 
             fig.tight_layout()
             path = os.path.join(plots, key, "single_{}_{}.pdf".format(metric, sequence))
             fig.savefig(path, bbox_inches="tight")
             plt.close(fig)
+
+            # Plot pareto vs. fixed config
+            fig = plt.figure(figsize=(2.5, 2))
+            ax = fig.add_subplot(111)
+
+            filtered_data = filter_config_points(df, settings)
+            ax.plot(pareto_df["bpp"], pareto_df[metric], color='red', label="Pareto-Front")
+
+            bpp = filtered_data["bpp"]
+            y_data = filtered_data[metric]
+
+            bjonte_model = Bjontegaard_Model(bpp, y_data)
+            x_scat, y_scat, x_dat, y_dat = bjonte_model.get_plot_data()
+
+            ax.plot(x_dat, y_dat, 
+                    label=runs[key]["label"],
+                    linestyle=runs[key]["linestyles"],
+                    color=runs[key]["colors"])
+            ax.scatter(x_scat, y_scat, 
+                    marker=runs[key]["markers"],
+                    color=runs[key]["colors"])
+            ax.set_xlabel(r"bpp")
+            ax.set_ylabel(metric_labels[metric])
+            ax.tick_params(axis='both', which='major')
+            ax.xaxis.set_label_coords(0.5, -0.12)
+            ax.yaxis.set_label_coords(-0.2, 0.5)
+            ax.legend()
+            ax.grid(visible=True)
+            path = os.path.join(plots, key, "rd-pareto_vs_fixed_{}_{}.pdf".format(metric, sequence))
+            fig.subplots_adjust(bottom=style.bottom, top=style.top, left=style.left, right=style.right)
+            fig.savefig(path)
+
+            plt.close(fig)
+
 
 
 def plot_pareto_figs_single(dataframe, key):
@@ -313,18 +267,14 @@ def filter_config_points(data, config):
     filtered_data = data[mask]
     return filtered_data
 
-def plot_rd_figs_all(dataframes):
+def plot_rd_figs_all(dataframes, folder):
     """
     All figures as used in the publication
     """
     for metric in metrics:
         figs = {}
-
         # Loop through results
         for method, df in dataframes.items():
-            if method == "YOGA":
-                continue # YOGA has no configs
-
             for sequence in df["sequence"].unique():
                 # Prepare figure
                 if sequence in figs.keys():
@@ -335,11 +285,13 @@ def plot_rd_figs_all(dataframes):
                     figs[sequence] = (fig, ax)
 
                 data = df[df["sequence"]== sequence]
-                settings = bd_points[method]
+                settings = runs[method]["bd_points"]
+
+                # Filter settings
+                if isinstance(settings, dict):
+                    settings = settings["8i"] if sequence in datasets["8iVFBv2"] or sequence=="8iVFBv2" else settings["Owlii"]
+
                 filtered_data = filter_config_points(data, settings)
-                if method == "L2":
-                    print(settings)
-                    print(filtered_data)
 
                 bpp = filtered_data["bpp"]
                 y = filtered_data[metric]
@@ -348,13 +300,12 @@ def plot_rd_figs_all(dataframes):
                 x_scat, y_scat, x_dat, y_dat = bjonte_model.get_plot_data()
 
                 ax.plot(x_dat, y_dat, 
-                        label=labels[method],
-                        linestyle=linestyles[method],
-                        color=run_colors[method])
+                        label=runs[method]["label"][folder],
+                        linestyle=runs[method]["linestyles"],
+                        color=runs[method]["colors"])
                 ax.scatter(x_scat, y_scat, 
-                        s=20,
-                        marker=markers[method],
-                        color=run_colors[method])
+                        marker=runs[method]["markers"],
+                        color=runs[method]["colors"])
                 ax.set_xlabel(r"bpp")
                 ax.set_ylabel(metric_labels[metric])
                 ax.tick_params(axis='both', which='major')
@@ -366,47 +317,61 @@ def plot_rd_figs_all(dataframes):
             fig, ax = items
             ax.legend()
             ax.grid(visible=True)
-            path = os.path.join(plots, "all", "rd-config_{}_{}.pdf".format(metric, key))
-            fig.subplots_adjust(bottom=bottom, top=top, left=left, right=right)
+            path = os.path.join(plots, folder, "rd-config_{}_{}.pdf".format(metric, key))
+            fig.subplots_adjust(bottom=style.bottom, top=style.top, left=style.left, right=style.right)
             fig.savefig(path)
 
-            #fig.tight_layout()
-            #fig.savefig(path, bbox_inches="tight")
             plt.close(fig)
 
 
-def compute_bd_deltas(dataframes):
-    ref = "G-PCC"
-    test = "L2"
-    for metric in metrics:
-        print(metric)
-        # Get G-PCC config for BD Points
-        ref_data = dataframes[ref]
-        test_data = dataframes[test]
-        for sequence in ref_data["sequence"].unique():
-            ref_df = ref_data[ref_data["sequence"]== sequence]
-            ref_settings = bd_points[ref]
-            filtered_ref = filter_config_points(ref_df, ref_settings)
+def compute_bd_deltas(dataframes, references, test, dir):
+    results = []
+    for ref in references:
+        for metric in metrics:
+            # Get G-PCC config for BD Points
+            ref_data = dataframes[ref]
+            test_data = dataframes[test]
+            for sequence in ref_data["sequence"].unique():
+                # Get Reference data
+                ref_df = ref_data[ref_data["sequence"]== sequence]
+                if isinstance(runs[ref]["bd_points"], dict):    
+                    ref_settings = runs[ref]["bd_points"]["8i"] if sequence in datasets["8iVFBv2"] else runs[ref]["bd_points"]["Owlii"] 
+                else:
+                    ref_settings = runs[ref]["bd_points"]
+                filtered_ref = filter_config_points(ref_df, ref_settings)
 
-            test_df = test_data[test_data["sequence"]== sequence]
-            test_settings = bd_points[test]
-            filtered_test = filter_config_points(test_df, test_settings)
+                # Get test data
+                test_df = test_data[test_data["sequence"]== sequence]
+                if isinstance(runs[test]["bd_points"], dict):    
+                    test_settings = runs[test]["bd_points"]["8i"] if sequence in datasets["8iVFBv2"] else runs[test]["bd_points"]["Owlii"] 
+                else:
+                    test_settings = runs[test]["bd_points"]
+                filtered_test = filter_config_points(test_df, test_settings)
 
-            bpp = filtered_ref["bpp"]
-            y = filtered_ref[metric]
-            ref_model = Bjontegaard_Model(bpp, y)
+                bpp = filtered_ref["bpp"]
+                y = filtered_ref[metric]
+                ref_model = Bjontegaard_Model(bpp, y)
 
-            bpp = filtered_test["bpp"]
-            y = filtered_test[metric]
-            test_model = Bjontegaard_Model(bpp, y)
+                bpp = filtered_test["bpp"]
+                y = filtered_test[metric]
+                test_model = Bjontegaard_Model(bpp, y)
 
-            delta = Bjontegaard_Delta()
-            psnr_delta = delta.compute_BD_PSNR(ref_model, test_model)
-            rate_delta = delta.compute_BD_Rate(ref_model, test_model)
+                delta = Bjontegaard_Delta()
+                psnr_delta = delta.compute_BD_PSNR(ref_model, test_model)
+                rate_delta = delta.compute_BD_Rate(ref_model, test_model)
 
-            print("Sequence: {:<10} \t\tPSNR-Delta: {:.6} \tRate-Delta: {:.4}".format(sequence, psnr_delta, rate_delta))
+                results.append({
+                    "reference": ref,
+                    "test": test,
+                    "sequence": sequence,
+                    "metric": metric,
+                    "psnr_delta": psnr_delta,
+                    "rate_delta": rate_delta
+                })
 
-
+    results_df = pd.DataFrame(results)
+    output_path = os.path.join(plots, dir, f"bd_deltas_{test}.csv")
+    results_df.to_csv(output_path, index=False)
 
 
 def get_pareto_df(dataframe):
@@ -430,15 +395,33 @@ def get_pareto_df(dataframe):
     pareto_dataframe = pd.concat(pareto_dataframe, ignore_index=True)
     return pareto_dataframe
 
-def load_csvs():
+def load_csvs(keys):
     data = {}
-    for key, run in runs.items():
-        data_path = os.path.join(path, run, "test.csv")
+    for key in keys:
+        data_path = os.path.join(path, key, "test.csv")
         data[key] = pd.read_csv(data_path)
 
         # Preprocessing
         data[key]["pcqm"] = 1 - data[key]["pcqm"]
 
+        # Average per data set
+        averaged_rows = []
+        for testset, sequences in datasets.items():
+            # Filter the DataFrame to only include rows with these sequences
+            filtered_df = data[key][data[key]['sequence'].isin(sequences)]
+
+            # Group by unique `q_a` and `q_g` configurations and compute the mean for each group
+            grouped = filtered_df.groupby(['q_a', 'q_g']).mean(numeric_only=True).reset_index()
+            
+            # Assign the sequence name to each group average
+            grouped['sequence'] = testset
+            
+            # Append the grouped result to the list of averaged rows
+            averaged_rows.append(grouped)
+
+        # Convert the list of averaged rows to a DataFrame
+        averaged_df = pd.concat(averaged_rows, ignore_index=True)
+        data[key] = pd.concat([data[key], averaged_df], ignore_index=True)
     return data
 
 

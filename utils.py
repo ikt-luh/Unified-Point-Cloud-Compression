@@ -654,6 +654,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         rec_pc = o3d.io.read_point_cloud(rec_dir)
         colors = np.asarray(rec_pc.colors)
         rec_pc.colors=o3d.utility.Vector3dVector(colors)
+
     elif experiment=="IT-DL-PCC":
         command = ['python3', './dependencies/IT-DL-PCC/src/IT-DL-PCC.py',
             '--with_color',
@@ -663,7 +664,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
             './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(q_g),
             '{}'.format(path),
             '--scale=1',
-            '--use_fast_topk'
+            '--use_fast_topk',
             '--blk_size=256',
         ]
         t0 = time.time()

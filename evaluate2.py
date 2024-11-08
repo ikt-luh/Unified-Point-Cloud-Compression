@@ -34,11 +34,11 @@ ref_paths = {
      "longdress" : "./data/datasets/8iVFB/longdress_vox10_1300.ply",
      "soldier" : "./data/datasets/8iVFB/soldier_vox10_0690.ply",
      "redandblack" : "./data/datasets/8iVFB/redandblack_vox10_1550.ply",
-
      "basketball_player" : "./data/datasets/Owlii/basketball_player_vox11_00000200.ply",
      "dancer" : "./data/datasets/Owlii/dancer_vox11_00000001.ply",
      "exercise" : "./data/datasets/Owlii/exercise_vox11_00000001.ply",
      "model" : "./data/datasets/Owlii/model_vox11_00000001.ply",
+
 
      #"thaidancer" : "./data/datasets/raw/jpeg_testset/Thaidancer_viewdep_vox12.ply",
      #"bouquet" : "./data/datasets/raw/jpeg_testset/RWT130Bouquet.ply",
@@ -100,14 +100,15 @@ block_sizes ={
 }
 
 
-device_id = 1
+device_id = 2
 experiments = [
     #"Ours",
     #"V-PCC",
     #"G-PCC",
-    "IT-DL-PCC",
+    #"IT-DL-PCC",
 
-    #"Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn"
+    #"Final_L2_GDN_scale_rescale_ste_offsets_shepard_2"
+    "CVPR_inverse_scaling_shepard"
     ]
 
 related_work = [
@@ -132,8 +133,8 @@ def run_testset(experiments):
 
         # Set model and QPs
         if experiment not in related_work:
-            q_as = np.arange(6) * 0.2
-            q_gs = np.arange(6) * 0.2
+            q_as = np.arange(11) * 0.1
+            q_gs = np.arange(11) * 0.1
             #q_as = np.arange(21) * 0.05 
             #q_gs = np.arange(21) * 0.05
 
@@ -151,7 +152,7 @@ def run_testset(experiments):
         elif experiment == "G-PCC":
             #q_as = np.arange(21, 52)
             q_as = [51, 46, 40, 34, 28, 22]
-            q_gs = [0.0625, 0.125, 0.1875, 0.25, 0.375, 0.5, 0.75, 0.875, 0.9375]
+            q_gs = [0.0625, 0.125, 0.25, 0.5, 0.75, 0.875, 0.9375]
         elif experiment == "V-PCC":
             q_as = np.arange(22, 43)
             q_gs = [32, 28, 24, 20, 16]
