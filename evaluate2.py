@@ -100,7 +100,7 @@ block_sizes ={
 }
 
 
-device_id = 2
+device_id = 0
 experiments = [
     #"Ours",
     #"V-PCC",
@@ -108,7 +108,11 @@ experiments = [
     #"IT-DL-PCC",
 
     #"Final_L2_GDN_scale_rescale_ste_offsets_shepard_2"
-    "CVPR_inverse_scaling_shepard"
+    #"CVPR_inverse_scaling_shepard"
+    #"CVPR_inverse_scaling_fixed_R1",
+    #"CVPR_inverse_scaling_fixed_R2",
+    #"CVPR_inverse_scaling_fixed_R3",
+    "CVPR_inverse_scaling",
     ]
 
 related_work = [
@@ -133,10 +137,12 @@ def run_testset(experiments):
 
         # Set model and QPs
         if experiment not in related_work:
-            q_as = np.arange(11) * 0.1
-            q_gs = np.arange(11) * 0.1
+            #q_as = np.arange(11) * 0.1
+            #q_gs = np.arange(11) * 0.1
             #q_as = np.arange(21) * 0.05 
             #q_gs = np.arange(21) * 0.05
+            q_as = [1.0]
+            q_gs = [1.0]
 
             weight_path = os.path.join(base_path, experiment, "weights.pt")
             config_path = os.path.join(base_path, experiment, "config.yaml")
@@ -202,7 +208,8 @@ def run_testset(experiments):
                                                                                                 base_path)
 
                         # Renders of the pointcloud
-                        point_size = 1.0 if sequence in ["longdress", "soldier", "loot", "longdress"] else 2.0
+                        point_size = 0.1 if sequence in ["longdress", "soldier", "loot", "longdress"] else 0.2
+                        point_size = 0.1
                         path = os.path.join(base_path,
                                             experiment, 
                                             "renders_test",
@@ -302,7 +309,7 @@ def run_testset(experiments):
                     # Save the results as .csv
                     df = pd.DataFrame(experiment_results)
                     results_path = os.path.join(base_path, experiment, "test.csv")
-                    df.to_csv(results_path)
+                    #df.to_csv(results_path)
 
 
 

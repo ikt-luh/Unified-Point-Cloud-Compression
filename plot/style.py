@@ -11,7 +11,7 @@ plt.rcParams.update({
     'axes.labelsize': 8,               # Font size for axis labels
     'xtick.labelsize': 7,              # Font size for x-tick labels
     'ytick.labelsize': 7,              # Font size for y-tick labels
-    'lines.linewidth': 1,              # Default line width
+    'lines.linewidth': 1.5,              # Default line width
     'lines.markersize': 3,             # Default marker size
     'legend.fontsize': 8,              # Font size for legend
     'legend.frameon': True,            # Legend frame on
@@ -45,7 +45,7 @@ runs = {
     "G-PCC": {
         "label":
             {"sota_comparison": "G-PCC"},
-        "bd_points": {"8i" : [(0.5, 40), (0.75, 34), (0.875, 28), (0.9375, 22)], 
+        "bd_points": {"8iVFBv2" : [(0.5, 40), (0.75, 34), (0.875, 28), (0.9375, 22)], 
                       "Owlii": [(0.25, 40), (0.5, 34), (0.75, 28), (0.875, 22)]},
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[2],
@@ -54,8 +54,9 @@ runs = {
     },
     "DeepPCC": {
         "label": 
-            {"sota_comparison": "DeepPCC"},
-        "bd_points": [(1, 1), (2, 2), (3, 3), (4, 4)],
+            {"sota_comparison": "DeepPCC",
+             "ablation_fixed": "DeepPCC"},
+        "bd_points": {"8iVFBv2": [(1, 1), (2, 2), (3, 3), (4, 4)], },
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[1],
         "linestyles": linestyles[1],
@@ -64,7 +65,8 @@ runs = {
     "IT-DL-PCC": {
         "label": 
             {"sota_comparison": "IT-DL-PCC"},
-        "bd_points": [(0.004, 0.0), (0.002, 0.0), (0.0, 0.001), (0.0005, 0.0), (0.00025, 0.0)],
+        "bd_points": {"8iVFBv2" :[(0.001, 0.0), (0.002, 0.0), (0.004, 0.0), (0.0005, 0.0)],
+                      "Owlii" :[(0.001, 0.0), (0.002, 0.0), (0.004, 0.0), (0.0005, 0.0)]},
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[3],
         "linestyles": linestyles[3],
@@ -74,8 +76,11 @@ runs = {
         "label": 
             {"sota_comparison": "Ours",
              "ablation_scaling": "symmetric gain",
-             "ablation_loss": "MSE"},
-        "bd_points": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)],
+             "ablation_loss": "MSE",
+             "ablation_fixed": "Ours (1 Model)"},
+        "bd_points": {
+            "8iVFBv2": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)],
+            "Owlii": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)]},
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[0],
         "linestyles": linestyles[0],
@@ -86,7 +91,9 @@ runs = {
             {"sota_comparison": "Ours",
              "ablation_scaling": "asymmetric gain",
              "ablation_loss": "MSE"},
-        "bd_points": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)],
+        "bd_points": {
+            "8iVFBv2": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)],
+            "Owlii": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)]},
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[1],
         "linestyles": linestyles[1],
@@ -95,7 +102,9 @@ runs = {
     "YOGA" : {
         "label": 
             {"sota_comparison": "YOGA"},
-        "bd_points": [ (8, 3), (12, 6), (18, 10),  (20, 20)],
+        "bd_points": {
+            "8iVFBv2" : [ (8, 3), (12, 6), (18, 10),  (20, 20)],
+        },
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[4],
         "linestyles": linestyles[4],
@@ -106,7 +115,9 @@ runs = {
             {"sota_comparison": "Ours",
              "ablation_scaling": "asymmetric gain",
              "ablation_loss": "MSE+IWD"},
-        "bd_points": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)],
+        "bd_points": {
+            "8iVFBv2": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)],
+            "Owlii": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)]},
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[0],
         "linestyles": linestyles[0],
@@ -117,7 +128,20 @@ runs = {
             {"sota_comparison": "Ours",
              "ablation_scaling": "symmetric gain",
              "ablation_loss": "MSE+IWD"},
-        "bd_points": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)],
+        "bd_points": {
+            "8iVFBv2": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)],
+            "Owlii": [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4),  (1.0, 1.0)]},
+        "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
+        "colors": colors[1],
+        "linestyles": linestyles[1],
+        "markers": markers[1],
+    },
+    "CVPR_inverse_scaling_fixed" : {
+        "label": 
+            { "ablation_fixed": "Fixed (4 Models)"},
+        "bd_points": {
+            "8iVFBv2": [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0),  (4.0, 4.0)],
+            "Owlii": [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0),  (4.0, 4.0)]},
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[1],
         "linestyles": linestyles[1],
@@ -132,4 +156,5 @@ metric_labels = {
     "sym_y_psnr" : r"Y-PSNR [dB]",
     "sym_yuv_psnr" : r"YUV-PSNR [dB]",
     "sym_p2p_psnr" : r"D1-PSNR [dB]",
+    "sym_d2_psnr" : r"D2-PSNR [dB]",
 }

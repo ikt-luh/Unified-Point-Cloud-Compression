@@ -120,8 +120,8 @@ class MeanScaleHyperprior_Map(CompressionModel):
         self.inverse_rescaling = config["inverse_rescaling"]
         self.quantization_mode = config["quantization_mode"]
         self.entropy_bottleneck_vbr = config["entropy_bottleneck_vbr"]
+        self.adaptive_BN = config["adaptive_BN"] if "adaptive_BN" in config.keys() else True
         
-        #self.eps = 0.01
         self.eps = 0.0001
         self.quantization_offset = config["quantization_offset"]
         self.gaussian_conditional = GaussianConditional(None)
@@ -156,15 +156,6 @@ class MeanScaleHyperprior_Map(CompressionModel):
             SortedMinkowskiConvolution( in_channels=C_bottleneck*3//2, out_channels=C_bottleneck*2, kernel_size=3, stride=1, dimension=3, bias=True)
         )
 
-        # Compute scales per channel from q values
-        #self.scale_nn = nn.Sequential(
-        #    nn.Linear(2, C_bottleneck//4),
-        #    nn.ReLU(),
-        #    nn.Linear(C_bottleneck//4, C_bottleneck),
-        #    nn.ReLU(),
-        #    nn.Linear(C_bottleneck, C_bottleneck),
-        #    nn.Softplus(),
-        #)
         self.scale_nn = nn.Sequential(
             nn.Linear(2, 8),
             nn.ReLU(),
@@ -230,16 +221,22 @@ class MeanScaleHyperprior_Map(CompressionModel):
         y_feats = y.F.t().unsqueeze(0)
 
         y_batch_indices = y.C[:, 0]
-        scale = self.scale_nn(q) + self.eps
-        if self.entropy_bottleneck_vbr:
-            z_qstep = self.gain2zqstep(q)
+        if self.adaptive_BN:
+            scale = self.scale_nn(q) + self.eps
+            if self.entropy_bottleneck_vbr:
+                z_qstep = self.gain2zqstep(q)
             
-        scale = scale[y_batch_indices].t().unsqueeze(0)
-        if self.inverse_rescaling:
-            rescale = torch.tensor(1.0) / scale.clone().detach() #TODO: is this a good idea?
-        else:
-            rescale = torch.tensor(1.0) / self.rescale_nn(q)
-            rescale = rescale[y_batch_indices].t().unsqueeze(0)
+            scale = scale[y_batch_indices].t().unsqueeze(0)
+            if self.inverse_rescaling:
+                rescale = torch.tensor(1.0) / scale.clone().detach() #TODO: is this a good idea?
+            else:
+                rescale = torch.tensor(1.0) / self.rescale_nn(q)
+                rescale = rescale[y_batch_indices].t().unsqueeze(0)
+        else: 
+            N, F = y.C.shape[0], y.F.shape[1]
+            scale = torch.ones((1,F,N), device=y.device)
+            rescale = torch.ones((1,F,N), device=y.device)
+
 
         if self.quantization_mode == "uniform":
             z_hat, z_likelihoods = self.entropy_bottleneck(z_feats)
@@ -266,7 +263,6 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scales_hat, means_hat = gaussian_params_feats.chunk(2, dim=1)
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0) 
-
 
         # Find the right scales
         if self.quantization_offset:
@@ -336,8 +332,12 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0)
 
-        scale = self.scale_nn(q) + self.eps
-        scale = scale[y_batch_indices].t().unsqueeze(0)
+        if self.adaptive_BN:
+            scale = self.scale_nn(q) + self.eps
+            scale = scale[y_batch_indices].t().unsqueeze(0)
+        else:
+            N, F = y.C.shape[0], y.F.shape[1]
+            scale = torch.ones((1,F,N), device=y.device)
 
         indexes = self.gaussian_conditional.build_indexes(scales_hat * scale)
         y_strings = self.gaussian_conditional.compress(
@@ -380,13 +380,17 @@ class MeanScaleHyperprior_Map(CompressionModel):
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0)
 
-        scale = self.scale_nn(q) + self.eps
-        scale = scale[y_batch_indices].t().unsqueeze(0)
-        if self.inverse_rescaling:
-            rescale = torch.tensor(1.0) / scale
+        if self.adaptive_BN:
+            scale = self.scale_nn(q) + self.eps
+            scale = scale[y_batch_indices].t().unsqueeze(0)
+            if self.inverse_rescaling:
+                rescale = torch.tensor(1.0) / scale
+            else:
+                rescale = torch.tensor(1.0) / self.rescale_nn(q) 
+                rescale = rescale[y_batch_indices].t().unsqueeze(0)
         else:
-            rescale = torch.tensor(1.0) / self.rescale_nn(q) 
-            rescale = rescale[y_batch_indices].t().unsqueeze(0)
+            scale = torch.ones_like(means_hat, device=z_points.device)
+            rescale = torch.ones_like(means_hat, device=z_points.device)
 
         indexes = self.gaussian_conditional.build_indexes(scales_hat * scale)
         if self.quantization_offset:

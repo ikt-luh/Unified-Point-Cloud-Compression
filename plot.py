@@ -3,6 +3,7 @@ from metrics.bjontegaard import Bjontegaard_Delta, Bjontegaard_Model
 
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import matplotlib.cm as cm
 from scipy.interpolate import griddata
 import scipy.stats as st
@@ -15,14 +16,15 @@ from plot.style import runs, metric_labels
 # Runs
 path = "./results"
 plots = "./plot/figures"
-metrics = ["pcqm", "sym_y_psnr", "sym_p2p_psnr", "sym_yuv_psnr"]
+metrics = ["pcqm", "sym_y_psnr", "sym_p2p_psnr", "sym_d2_psnr", "sym_yuv_psnr"]
 
 sota_comparison = ["CVPR_inverse_scaling", "G-PCC", "IT-DL-PCC", "DeepPCC", "YOGA"]
 ablation_scaling = ["CVPR_inverse_scaling", "Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn_vbr_btlnk"]
 ablation_loss = ["CVPR_inverse_scaling", "CVPR_inverse_scaling_shepard"]
+ablation_fixed = ["CVPR_inverse_scaling", "CVPR_inverse_scaling_fixed"]
 
 datasets = {"8iVFBv2": ["soldier", "longdress", "loot", "redandblack", "8iVFBv2"],
-            "Owlii": ["exercise", "model", "exercise", "basketball_player", "Owlii"]}
+            "Owlii": ["exercise", "model", "dancer", "basketball_player", "Owlii"]}
 
 def plot_experiments():
     """
@@ -33,7 +35,7 @@ def plot_experiments():
     plot_rd_figs_all(data, "sota_comparison")
     
     # TODO
-    #compute_bd_deltas(data, sota_comparison, "CVPR_inverse_scaling", "sota_comparison")
+    compute_bd_deltas(data, sota_comparison, "CVPR_inverse_scaling", "sota_comparison")
     
     # Timing
     # Plot per run results
@@ -45,10 +47,29 @@ def plot_experiments():
     # Scaling Comparison
     data = load_csvs(ablation_scaling)
     plot_rd_figs_all(data, "ablation_scaling")
+    compute_bd_deltas(data, ablation_scaling, "CVPR_inverse_scaling", "ablation_scaling")
+    pareto_data = {}
+    for key, dataframe in data.items():
+        pareto_df = plot_per_run_results(dataframe, key)
+        pareto_data[key] = pareto_df
 
     # Loss Comparison
     data = load_csvs(ablation_loss)
     plot_rd_figs_all(data, "ablation_loss")
+    compute_bd_deltas(data, ablation_loss, "CVPR_inverse_scaling", "ablation_loss")
+    pareto_data = {}
+    for key, dataframe in data.items():
+        pareto_df = plot_per_run_results(dataframe, key)
+        pareto_data[key] = pareto_df
+
+    # Fixed Comparison
+    data = load_csvs(ablation_fixed)
+    plot_rd_figs_all(data, "ablation_fixed")
+    compute_bd_deltas(data, ablation_fixed, "CVPR_inverse_scaling", "ablation_fixed")
+    pareto_data = {}
+    for key, dataframe in data.items():
+        pareto_df = plot_per_run_results(dataframe, key)
+        pareto_data[key] = pareto_df
 
 
 def plot_per_run_results(dataframe, key):
@@ -89,6 +110,10 @@ def plot_settings(dataframe, pareto_dataframe, key):
 
         x = df["q_a"].values
         y = df["q_g"].values
+        if key in "YOGA":
+            x = ((x - 1) / 19)
+            y = ((y - 1) / 19) 
+            
         X, Y = np.meshgrid(np.linspace(x.min(), x.max(), len(x)), np.linspace(y.min(), y.max(), len(y)))
 
         for metric in metrics:
@@ -112,20 +137,39 @@ def plot_settings(dataframe, pareto_dataframe, key):
 
             # Pareto in countour
             cs2 = ax.contourf(X, Y, z_interp, 10, levels=levels, cmap=cm.cool, extend='min')
+            """
             if key in "YOGA":
-                ax.plot(pareto_df["q_a"]/20, pareto_df["q_g"]/20, color=runs[key]["colors"], marker="x", clip_on=False)
+                ax.plot(pareto_df["q_a"]/20, pareto_df["q_g"]/20, color="red", marker="x", clip_on=False, label="Pareto-Front")
             else: 
-                ax.plot(pareto_df["q_a"], pareto_df["q_g"], color=runs[key]["colors"], marker="x", clip_on=False)
+                ax.plot(pareto_df["q_a"], pareto_df["q_g"], color="red", marker="x", clip_on=False, label="Pareto-Front")
+            """
+
 
             # Add Settings
             settings = runs[key]["bd_points"]
-            if isinstance(settings, dict):
-                settings = settings["8i"] if sequence in datasets["8iVFBv2"] or sequence=="8iVFBv2" else settings["Owlii"]
-            for q_a, q_g in settings:
+            my_key = None
+            for k, values in datasets.items():
+                if sequence in values:
+                    my_key = k
+            if my_key in settings:
+                settings = settings[my_key]
+            else:
+                continue
+
+            q_as, q_gs = [], []
+            for i, (q_a, q_g) in enumerate(settings):
                 if key == "YOGA":
-                    q_a = q_a/20
-                    q_g = q_g/20
-                ax.scatter(q_a, q_g, s=40, edgecolors="red", marker="o", facecolors="none", linewidth=2, clip_on=False, label="Choosen configuraiton")
+                    q_a = (q_a - 1)/19
+                    q_g = (q_g - 1)/19
+                q_as.append(q_a)
+                q_gs.append(q_a)
+                """
+                if i == 0:
+                    ax.scatter(q_a, q_g, s=40, edgecolors="#003366", marker="o", facecolors="none", linewidth=2, clip_on=False, label="Select Config.")
+                else:
+                    ax.scatter(q_a, q_g, s=40, edgecolors="#003366", marker="o", facecolors="none", linewidth=2, clip_on=False, )
+                """
+            ax.plot(q_as, q_gs, color="#003366", marker="o", clip_on=False, markersize=5, label="Selected Config.")
 
             ax.set_xlabel(r"$q^{(A)}$")
             ax.set_ylabel(r"$q^{(G)}$", rotation=0, ha="right", va="center")
@@ -135,6 +179,7 @@ def plot_settings(dataframe, pareto_dataframe, key):
             ax.set_yticks([0, 1])
             ax.xaxis.set_label_coords(0.5, -0.03)
             ax.yaxis.set_label_coords(-0.03, 0.5)
+            ax.legend()
 
             cbar = fig.colorbar(cs2, boundaries=levels, ticks=bar_levels)
             cbar.ax.set_ylabel(metric_labels[metric])
@@ -152,7 +197,7 @@ def plot_settings(dataframe, pareto_dataframe, key):
             ax = fig.add_subplot(111)
 
             filtered_data = filter_config_points(df, settings)
-            ax.plot(pareto_df["bpp"], pareto_df[metric], color='red', label="Pareto-Front")
+            ax.plot(pareto_df["bpp"], pareto_df[metric], color='black', label="Pareto-Front")
 
             bpp = filtered_data["bpp"]
             y_data = filtered_data[metric]
@@ -172,8 +217,9 @@ def plot_settings(dataframe, pareto_dataframe, key):
             ax.tick_params(axis='both', which='major')
             ax.xaxis.set_label_coords(0.5, -0.12)
             ax.yaxis.set_label_coords(-0.2, 0.5)
-            ax.legend()
-            ax.grid(visible=True)
+            legend = ax.legend()
+
+            ax.grid(visible=False)
             path = os.path.join(plots, key, "rd-pareto_vs_fixed_{}_{}.pdf".format(metric, sequence))
             fig.subplots_adjust(bottom=style.bottom, top=style.top, left=style.left, right=style.right)
             fig.savefig(path)
@@ -287,9 +333,14 @@ def plot_rd_figs_all(dataframes, folder):
                 data = df[df["sequence"]== sequence]
                 settings = runs[method]["bd_points"]
 
-                # Filter settings
-                if isinstance(settings, dict):
-                    settings = settings["8i"] if sequence in datasets["8iVFBv2"] or sequence=="8iVFBv2" else settings["Owlii"]
+                my_key = None
+                for key, values in datasets.items():
+                    if sequence in values:
+                        my_key = key
+                if my_key in settings:
+                    settings = settings[my_key]
+                else:
+                    continue
 
                 filtered_data = filter_config_points(data, settings)
 
@@ -309,8 +360,12 @@ def plot_rd_figs_all(dataframes, folder):
                 ax.set_xlabel(r"bpp")
                 ax.set_ylabel(metric_labels[metric])
                 ax.tick_params(axis='both', which='major')
+                if metric == "pcqm":
+                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.002))
+                    ax.yaxis.set_label_coords(-0.2, 0.5)
+                else:
+                    ax.yaxis.set_label_coords(-0.12, 0.5)
                 ax.xaxis.set_label_coords(0.5, -0.12)
-                ax.yaxis.set_label_coords(-0.2, 0.5)
                 
 
         for key, items in figs.items():
@@ -334,19 +389,31 @@ def compute_bd_deltas(dataframes, references, test, dir):
             for sequence in ref_data["sequence"].unique():
                 # Get Reference data
                 ref_df = ref_data[ref_data["sequence"]== sequence]
-                if isinstance(runs[ref]["bd_points"], dict):    
-                    ref_settings = runs[ref]["bd_points"]["8i"] if sequence in datasets["8iVFBv2"] else runs[ref]["bd_points"]["Owlii"] 
+
+                ref_settings = runs[ref]["bd_points"]
+                key = None
+                for k, values in datasets.items():
+                    if sequence in values:
+                        key = k
+                if key in ref_settings:
+                    ref_settings = ref_settings[key]
                 else:
-                    ref_settings = runs[ref]["bd_points"]
+                    continue
                 filtered_ref = filter_config_points(ref_df, ref_settings)
 
                 # Get test data
                 test_df = test_data[test_data["sequence"]== sequence]
-                if isinstance(runs[test]["bd_points"], dict):    
-                    test_settings = runs[test]["bd_points"]["8i"] if sequence in datasets["8iVFBv2"] else runs[test]["bd_points"]["Owlii"] 
+                test_settings = runs[test]["bd_points"]
+                key = None
+                for k, values in datasets.items():
+                    if sequence in values:
+                        key = k
+                if key in test_settings:
+                    test_settings = test_settings[key]
                 else:
-                    test_settings = runs[test]["bd_points"]
+                    continue
                 filtered_test = filter_config_points(test_df, test_settings)
+
 
                 bpp = filtered_ref["bpp"]
                 y = filtered_ref[metric]
@@ -434,7 +501,7 @@ def compute_times(data):
 
         for sequence in results["sequence"].unique():
             test_sequences = ["loot", "longdress", "soldier", "redandblack"]
-            if not sequence in test_sequences:
+            if sequence not in test_sequences:
                 continue
             
 
