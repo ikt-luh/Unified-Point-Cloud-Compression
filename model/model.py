@@ -8,9 +8,8 @@ import subprocess
 import open3d as o3d
 from bitstream import BitStream
 
-from .entropy_models2 import *
-#from .entropy_models3 import *
-from .transforms3 import *
+from .entropy_models import *
+from .transforms import *
 
 import utils
 

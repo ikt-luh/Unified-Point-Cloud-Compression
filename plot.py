@@ -137,12 +137,8 @@ def plot_settings(dataframe, pareto_dataframe, key):
 
             # Pareto in countour
             cs2 = ax.contourf(X, Y, z_interp, 10, levels=levels, cmap=cm.cool, extend='min')
-            """
             if key in "YOGA":
-                ax.plot(pareto_df["q_a"]/20, pareto_df["q_g"]/20, color="red", marker="x", clip_on=False, label="Pareto-Front")
-            else: 
-                ax.plot(pareto_df["q_a"], pareto_df["q_g"], color="red", marker="x", clip_on=False, label="Pareto-Front")
-            """
+                ax.plot((pareto_df["q_a"] - 1)/19, (pareto_df["q_g"]-1)/19, color="red", linewidth=0.5, clip_on=False, label="Pareto-Front")
 
 
             # Add Settings
@@ -157,18 +153,16 @@ def plot_settings(dataframe, pareto_dataframe, key):
                 continue
 
             q_as, q_gs = [], []
-            for i, (q_a, q_g) in enumerate(settings):
+            for i, (q_g, q_a) in enumerate(settings):
                 if key == "YOGA":
                     q_a = (q_a - 1)/19
                     q_g = (q_g - 1)/19
                 q_as.append(q_a)
-                q_gs.append(q_a)
-                """
-                if i == 0:
-                    ax.scatter(q_a, q_g, s=40, edgecolors="#003366", marker="o", facecolors="none", linewidth=2, clip_on=False, label="Select Config.")
-                else:
-                    ax.scatter(q_a, q_g, s=40, edgecolors="#003366", marker="o", facecolors="none", linewidth=2, clip_on=False, )
-                """
+                q_gs.append(q_g)
+
+            #if key == "YOGA":
+            #    ax.scatter(q_as, q_gs, s=40, edgecolors="red", marker="o", facecolors="none", linewidth=4, clip_on=False, label="Select Config.")
+            #else:
             ax.plot(q_as, q_gs, color="#003366", marker="o", clip_on=False, markersize=5, label="Selected Config.")
 
             ax.set_xlabel(r"$q^{(A)}$")

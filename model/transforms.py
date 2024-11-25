@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import MinkowskiEngine as ME
 
 from model.blocks import *  
@@ -27,41 +28,23 @@ class AnalysisTransform(nn.Module):
         N1 = config["N1"]
         N2 = config["N2"]
         N3 = config["N3"]
+        N4 = config["N4"]
 
-        self.condition_ablation = config["condition_ablation"] if "condition_ablation" in config else None
-
-        if config["source_condition"]:
-            self.cond_conv = nn.Sequential(
-                ME.MinkowskiConvolution(in_channels=C_in, out_channels=2, kernel_size=3, stride=1, bias=True, dimension=3),
-                ME.MinkowskiReLU(inplace=False),
-                ME.MinkowskiConvolution(in_channels=2, out_channels=2, kernel_size=3, stride=1, bias=True, dimension=3),
-            )
-        else: 
-            self.cond_conv = None
-
-
-        # Model
-        self.pre_conv = nn.Sequential(
-            ME.MinkowskiConvolution(in_channels=C_in, out_channels=N1, kernel_size=3, stride=1, bias=True, dimension=3),
-            #ME.MinkowskiConvolution(in_channels=C_in, out_channels=N1, kernel_size=7, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
+        self.down_conv_1 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=C_in, out_channels=N1, kernel_size=5, stride=2, bias=True, dimension=3),
+            MinkowskiGDN(N1),
+        )
+        self.down_conv_2 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N1, out_channels=N2, kernel_size=5, stride=2, bias=True, dimension=3),
+            MinkowskiGDN(N2),
+        )
+        self.down_conv_3 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N2, out_channels=N3, kernel_size=5, stride=2, bias=True, dimension=3),
+            MinkowskiGDN(N3),
+            ME.MinkowskiConvolution(in_channels=N3, out_channels=N4, kernel_size=5, stride=1, bias=True, dimension=3)
         )
 
-        self.down_1 = ME.MinkowskiConvolution(in_channels=N1, out_channels=N2, kernel_size=3, stride=2, bias=True, dimension=3)
-        self.down_2 = ME.MinkowskiConvolution(in_channels=N2, out_channels=N3, kernel_size=3, stride=2, bias=True, dimension=3)
-        self.down_3 = ME.MinkowskiConvolution(in_channels=N3, out_channels=N3, kernel_size=3, stride=2, bias=True, dimension=3)
 
-        self.scale_1 = ScaledBlock(N2, encode=True, scale=True)
-        self.scale_2 = ScaledBlock(N3, encode=True, scale=True)
-        self.scale_3 = ScaledBlock(N3, encode=True, scale=True)
-
-        self.post_conv = ME.MinkowskiConvolution(in_channels=N3, out_channels=N3, kernel_size=3, stride=1, bias=True, dimension=3)
-
-        # Conditions
-        self.condition_encoder = ConditionEncoder(C_in = 2, 
-                                                  N_scales=[N2, N2, N3],
-                                                  N_features=[2, 2, 2, 2],
-                                                  condition_ablation=self.condition_ablation)
 
     def count_per_batch(self, x):
         batch_indices = torch.unique(x.C[:, 0])  # Get unique batch IDs
@@ -73,7 +56,7 @@ class AnalysisTransform(nn.Module):
         
         
 
-    def forward(self, x, Q):
+    def forward(self, x, q):
         """
         Forward pass for the analysis transform
 
@@ -90,46 +73,20 @@ class AnalysisTransform(nn.Module):
         k = []
         k.append(self.count_per_batch(x))
 
-        if self.cond_conv:
-            Q_plus = self.cond_conv(x)
-            Q = ME.SparseTensor(
-                coordinates=Q.C,
-                features=Q.F + Q_plus.features_at_coordinates(Q.C.float()),
-                device=Q.device
-            )
-        
-        # Condition
-        Q, beta_gammas = self.condition_encoder(Q)
-
-        # Pre-Conv
-        x = self.pre_conv(x)
-
-        # Layer 1
-        x = self.down_1(x)
-        x = self.scale_1(x, beta_gammas[0])
+        # Level 1
+        x = self.down_conv_1(x)
         k.append(self.count_per_batch(x))
 
         # Layer 2
-        x = self.down_2(x)
-        x = self.scale_2(x, beta_gammas[1])
+        x = self.down_conv_2(x)
         k.append(self.count_per_batch(x))
 
         # Layer 3
-        x = self.down_3(x)
-        x = self.scale_3(x, beta_gammas[2])
-
-        x = self.post_conv(x)
-
-        # Concat quality and features for compression
-        Q = ME.SparseTensor(coordinates=x.C,
-                            features=Q.features_at_coordinates(x.C.float()),
-                            tensor_stride=x.tensor_stride)
+        x = self.down_conv_3(x)
 
         k.reverse()
-        return x, Q, k
+        return x, q, k
 
-
-        
 
 
 class SparseSynthesisTransform(torch.nn.Module):
@@ -155,93 +112,50 @@ class SparseSynthesisTransform(torch.nn.Module):
         N1 = config["N1"]
         N2 = config["N2"]
         N3 = config["N3"]
+        N4 = config["N4"]
+ 
+        self.up_1 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N4, out_channels=N3, kernel_size=5, stride=1, bias=True, dimension=3),
+            MinkowskiGDN(N3, inverse=True),
+            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N3, out_channels=N2, kernel_size=5, stride=2, bias=True, dimension=3)
+        )
+        self.up_2 = nn.Sequential(
+            MinkowskiGDN(N2, inverse=True),
+            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N2, out_channels=N1, kernel_size=5, stride=2, bias=True, dimension=3)
+        )
+        self.up_3 = nn.Sequential(
+            MinkowskiGDN(N1, inverse=True),
+            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N1, out_channels=N1//4, kernel_size=5, stride=2, bias=True, dimension=3)
+        )
+        self.color_conv = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N1//4, out_channels=C_out, kernel_size=1, stride=1, bias=True, dimension=3),
+        )
+
+        self.predict_1 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N2, out_channels=N2//2, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiReLU(inplace=False),
+            ME.MinkowskiConvolution(in_channels=N2//2, out_channels=1, kernel_size=3, stride=1, bias=True, dimension=3),
+        )
+        self.predict_2 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N1, out_channels=N1//2, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiReLU(inplace=False),
+            ME.MinkowskiConvolution(in_channels=N1//2, out_channels=1, kernel_size=3, stride=1, bias=True, dimension=3),
+        )
+        self.predict_3 = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N1//4, out_channels=N4//8, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiReLU(inplace=False),
+            ME.MinkowskiConvolution(in_channels=N4//8, out_channels=1, kernel_size=3, stride=1, bias=True, dimension=3),
+        )
+
+
+        self.prune = Pruning()
         
-
-        # Ablation on dense upsampling
-        if "dense" in config.keys():
-            dense = config["dense"]
-        else:
-            dense = True
-
-
-        if config["source_condition"]:
-            self.cond_conv = nn.Sequential(
-                ME.MinkowskiConvolution(in_channels=N1, out_channels=N1//2, kernel_size=3, stride=1, bias=True, dimension=3),
-                ME.MinkowskiReLU(inplace=False),
-                ME.MinkowskiConvolution(in_channels=N1//2, out_channels=2, kernel_size=3, stride=1, bias=True, dimension=3),
-                ME.MinkowskiSigmoid()
-            )
-        else: 
-            self.cond_conv = None
-
-        # Model
-        self.pre_conv = nn.Sequential(
-            ME.MinkowskiConvolution(in_channels=N1, out_channels=N1, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-        )
-
-        self.up_1 = GenerativeUpBlock(N1, N1, predict=True, dense=dense)
-        self.up_2 = GenerativeUpBlock(N1, N2, predict=True, dense=dense)
-        self.up_3 = GenerativeUpBlock(N2, N3, predict=True, dense=dense)
-
-        self.scale_1 = ScaledBlock(N1, encode=False, scale=True)
-        self.scale_2 = ScaledBlock(N1, encode=False, scale=True)
-        self.scale_3 = ScaledBlock(N2, encode=False, scale=True)
-
-        self.post_conv = nn.Sequential(
-            ME.MinkowskiConvolution(in_channels=N3, out_channels=N3, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=N3, out_channels=N3//2, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=N3//2, out_channels=C_out, kernel_size=3, stride=1, bias=True, dimension=3),
-        )
-
-        # Condition
-        self.q_pre_conv = nn.Sequential(
-            ME.MinkowskiConvolution(in_channels=2, out_channels=16, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=16, out_channels=16, kernel_size=1, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=16, out_channels=2, kernel_size=3, stride=1, bias=True, dimension=3),
-        )
-
-        # Condition Ablation
-        self.condition_ablation = config["condition_ablation"] if "condition_ablation" in config else None
-
-        self.q_up_1 = GenerativeUpBlock(2, 2, condition_ablation=self.condition_ablation)
-        self.q_up_2 = GenerativeUpBlock(2, 2, condition_ablation=self.condition_ablation)
-        self.q_up_3 = GenerativeUpBlock(2, 2, condition_ablation=self.condition_ablation)
-
-        
-        self.q_predict_1 = nn.Sequential(
-            ME.MinkowskiConvolution(in_channels=2, out_channels=N1, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=N1, out_channels=N1, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=N1, out_channels=N1*2, kernel_size=3, stride=1, bias=True, dimension=3),
-        )
-        self.q_predict_2 = nn.Sequential(
-            ME.MinkowskiConvolution(in_channels=2, out_channels=N1, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=N1, out_channels=N1, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=N1, out_channels=N1*2, kernel_size=3, stride=1, bias=True, dimension=3),
-        )
-        self.q_predict_3 = nn.Sequential(
-            ME.MinkowskiConvolution(in_channels=2, out_channels=N2, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=N2, out_channels=N2, kernel_size=3, stride=1, bias=True, dimension=3),
-            ME.MinkowskiReLU(inplace=False),
-            ME.MinkowskiConvolution(in_channels=N2, out_channels=N2*2, kernel_size=3, stride=1, bias=True, dimension=3),
-        )
-
-
         # Auxiliary
         self.down_conv = ME.MinkowskiConvolution(in_channels=1, out_channels=1, kernel_size=3, stride=2, dimension=3)
 
 
 
-    def forward(self, x, Q, coords=None, k=None):
+    def forward(self, x, q_value, coords=None, k=None):
         """
         Forward pass for the synthesis transform
 
@@ -257,51 +171,87 @@ class SparseSynthesisTransform(torch.nn.Module):
         x: ME.SparseTensor
             Sparse Tensor containing the upsampled features at location of coords
         """
-        if self.cond_conv:
-            Q_plus = self.cond_conv(x)
-            Q = ME.SparseTensor(
-                coordinates=Q.C,
-                features=Q.F * Q_plus.features_at_coordinates(Q.C.float()),
-                tensor_stride=Q.tensor_stride,
-                device=Q.device
-            )
+        x = self.up_1(x)
+        predict_1 = self.predict_1(x)
+        occupancy_mask = self._topk_prediction(predict_1, k[0])
+        coords_1 = x.C[occupancy_mask]
+        x = self.prune(x, coords_1)
 
-        # Pre-Conv
-        x = self.pre_conv(x)
-        Q = self.q_pre_conv(Q)
+        x = self.up_2(x)
+        predict_2 = self.predict_2(x)
+        occupancy_mask = self._topk_prediction(predict_2, k[1])
+        coords_2 = x.C[occupancy_mask]
+        x = self.prune(x, coords_2)
 
-        # Layer 1
-        beta_gamma = self.q_predict_1(Q)
-        x = self.scale_1(x, beta_gamma)
+        x = self.up_3(x)
+        predict_3 = self.predict_3(x)
+        occupancy_mask = self._topk_prediction(predict_3, k[2])
+        coords_3 = x.C[occupancy_mask]
+        x = self.prune(x, coords_3)
 
-        x, predict_2, up_coords = self.up_1(x, k=k[0])
-        Q = self.q_up_1(Q, up_coords)
-
-        # Layer 2
-        beta_gamma = self.q_predict_2(Q)
-        x = self.scale_2(x, beta_gamma)
-
-        x, predict_1, up_coords = self.up_2(x, k=k[1])
-        Q = self.q_up_2(Q, up_coords)
-
-        # Layer 3
-        beta_gamma = self.q_predict_3(Q)
-        x = self.scale_3(x, beta_gamma)
-
-        x, predict_final, up_coords = self.up_3(x, k=k[2])
-        Q = self.q_up_3(Q, up_coords)
-
-        # Post Conv
-        x = self.post_conv(x)
+        x = self.color_conv(x)
 
         if coords is not None:
-            predictions = [predict_2, predict_1, predict_final]
+            predictions = [predict_1, predict_2, predict_3]
+            
+            # Generate ground truth values
             with torch.no_grad():
                 points_1 = self.down_conv(coords)
                 points_2 = self.down_conv(points_1)
             points = [points_2, points_1, coords]
             return x, points, predictions
-
         else:
             return x
 
+
+    def _topk_prediction(self, prediction, k):
+        """
+        Mask the top-k elements for each batch in prediction to get attributes at predicted points.
+        """
+        batch_indices = torch.unique(prediction.C[:, 0])  # Get unique batch IDs
+        pred_occupancy_mask = torch.zeros_like(prediction.F[:, 0], dtype=torch.bool)
+
+        for batch_idx in batch_indices:
+            # Mask for current batch
+            current_batch_mask = prediction.C[:, 0] == batch_idx
+
+            # Extract the predictions for the current batch and get top-k
+            current_preds = prediction.F[current_batch_mask, 0]
+            current_k = k[batch_idx]
+            _, top_indices = torch.topk(current_preds, int(current_k))
+    
+            # Use advanced indexing to set the top-k indices to True
+            indices_for_current_batch = torch.nonzero(current_batch_mask).squeeze()
+            pred_occupancy_mask[indices_for_current_batch[top_indices]] = True
+
+        return pred_occupancy_mask
+
+
+    def _prune_coords(self, x, occupied_points=None):
+        """
+        Prunes the coordinates after upsampling, only keeping points coinciding with occupied points
+
+        Parameters
+        ----------
+        x: ME.SparseTensor
+            Upsampled point cloud with features
+        occupied_points: ME.SparseTensor
+            Sparse Tensor containing the coordinates to keep
+
+        returns
+        -------
+        x: ME.SparseTensor
+            Pruned tensor with features
+        """
+        # Define Scaling Factors
+        scaling_factors = torch.tensor([1, 1e5, 1e10, 1e15], dtype=torch.int64, device=x.C.device)
+
+        # Transform to unique indices
+        x_flat = (x.C.to(torch.int64) * scaling_factors).sum(dim=1)
+        guide_flat = (occupied_points.to(torch.int64) * scaling_factors).sum(dim=1)
+
+        # Prune
+        mask = torch.isin(x_flat, guide_flat)
+        x = self.prune(x, mask)
+
+        return x

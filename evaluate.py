@@ -10,6 +10,7 @@ import copy
 from torch.utils.data import DataLoader
 import MinkowskiEngine as ME
 import subprocess
+from plyfile import PlyData
 
 import utils
 from model.model import ColorModel
@@ -20,36 +21,104 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
+os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
+torch.manual_seed(0)
+torch.use_deterministic_algorithms(True)
+
 norm = Normalize(vmin=0.0, vmax=10**(-2))
 # Paths
 base_path = "./results"
 data_path = "./data/datasets/full_128" 
 ref_paths = {
-     "soldier" : "../AttAndColors/data/datasets/raw/soldier/soldier/Ply/soldier_vox10_0690.ply",
-    "longdress" : "../AttAndColors/data/datasets/raw/longdress/longdress/Ply/longdress_vox10_1300.ply",
-     "loot" : "../AttAndColors/data/datasets/raw/loot/loot/Ply/loot_vox10_1200.ply",
-     "redandblack" : "../AttAndColors/data/datasets/raw/redandblack/redandblack/Ply/redandblack_vox10_1550.ply",
-     "phil9" : "../AttAndColors/data/datasets/raw/phil9/phil9/ply/frame0000.ply",
-     "sarah9" : "../AttAndColors/data/datasets/raw/sarah9/sarah9/ply/frame0000.ply",
-     "andrew9" : "../AttAndColors/data/datasets/raw/andrew9/andrew9/ply/frame0000.ply",
-     "david9" : "../AttAndColors/data/datasets/raw/david9/david9/ply/frame0000.ply",
+     "loot" : "./data/datasets/8iVFB/loot_vox10_1200.ply",
+     "longdress" : "./data/datasets/8iVFB/longdress_vox10_1300.ply",
+     "soldier" : "./data/datasets/8iVFB/soldier_vox10_0690.ply",
+     "redandblack" : "./data/datasets/8iVFB/redandblack_vox10_1550.ply",
+     "basketball_player" : "./data/datasets/Owlii/basketball_player_vox11_00000200.ply",
+     "dancer" : "./data/datasets/Owlii/dancer_vox11_00000001.ply",
+     "exercise" : "./data/datasets/Owlii/exercise_vox11_00000001.ply",
+     "model" : "./data/datasets/Owlii/model_vox11_00000001.ply",
+
+
+     #"thaidancer" : "./data/datasets/raw/jpeg_testset/Thaidancer_viewdep_vox12.ply",
+     #"bouquet" : "./data/datasets/raw/jpeg_testset/RWT130Bouquet.ply",
+     #"stmichael" : "./data/datasets/raw/jpeg_testset/RWT70StMichael.ply",
+     #"soldier" : "./data/datasets/raw/jpeg_testset/soldier_vox10_0690.ply",
+     #"boxer" : "./data/datasets/raw/jpeg_testset/boxer_viewdep_vox12.ply",
+     #"House" : "./data/datasets/raw/jpeg_testset/House_without_roof_00057_vox12.ply",
+     #"CITISUP" : "./data/datasets/raw/jpeg_testset/CITIUSP_vox13.ply",
+     #"Facade" : "./data/datasets/raw/jpeg_testset/Facade_00009_vox12.ply",
+     #"EPFL" : "./data/datasets/raw/jpeg_testset/EPFL_vox13.ply",
+     #"Arco" : "./data/datasets/raw/jpeg_testset/Arco_Valentino_Dense_vox12.ply",
+     #"shiva" : "./data/datasets/raw/jpeg_testset/Shiva_00035_vox12.ply",
+     #"Unicorn" : "./data/datasets/raw/jpeg_testset/ULB_Unicorn_vox13_n.ply",
      }
 resolutions ={
-    "longdress" : 1023, "soldier" : 1023, "loot" : 1023, "redandblack" : 1023,
-     "phil9" : 511, "sarah9" : 511, "andrew9" : 511, "david9" : 511,
+     "longdress" : 1023, 
+     "soldier" : 1023, 
+     "loot" : 1023, 
+     "redandblack" : 1023, 
+     "basketball_player" : 2047, 
+     "dancer" : 2047, 
+     "model" : 2047, 
+     "exercise" : 2047, 
+
+     "boxer" : 4095,
+     "thaidancer" : 4095,
+     "bouquet" : 1023,
+     "stmichael" : 1023,
+     "CITISUP" : 8191,
+     "EPFL" : 8191,
+     "Facade" : 4095,
+     "House" : 4095,
+     "shiva" : 4095,
+     "Unicorn" : 8191,
+     "Arco" : 4095,
+}
+block_sizes ={
+     "soldier" : 1024, 
+     "longdress" : 1024, 
+     "loot" : 1024, 
+     "redandblack" : 1024, 
+
+     "model" : 512, 
+     "exercise" : 512, 
+     "dancer" : 512, 
+     "basketball_player" : 512, 
+
+     "boxer" : 512,
+     "thaidancer" : 512,
+     "bouquet" : 512,
+     "stmichael" : 1024,
+     "CITISUP" : 512,
+     "EPFL" : 512,
+     "Facade" : 512,
+     "House" : 512,
+     "shiva" : 1024,
+     "Unicorn" : 1024,
+     "Arco" : 1024,
 }
 
 
-device_id = 3
+device_id = 0
 experiments = [
-    "Balle_MOO_5",
+    #"Ours",
     #"V-PCC",
     #"G-PCC",
+    #"IT-DL-PCC",
+
+    #"Final_L2_GDN_scale_rescale_ste_offsets_shepard_2"
+    #"CVPR_inverse_scaling_shepard"
+    #"CVPR_inverse_scaling_fixed_R1",
+    #"CVPR_inverse_scaling_fixed_R2",
+    #"CVPR_inverse_scaling_fixed_R3",
+    "CVPR_inverse_scaling",
     ]
 
 related_work = [
     "G-PCC",
-    "V-PCC"
+    "V-PCC",
+    "IT-DL-PCC",
 ]
 
 def run_testset(experiments):
@@ -68,10 +137,12 @@ def run_testset(experiments):
 
         # Set model and QPs
         if experiment not in related_work:
-            q_as = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-            q_gs = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-            #q_as = np.arange(21) * 0.05
+            #q_as = np.arange(11) * 0.1
+            #q_gs = np.arange(11) * 0.1
+            #q_as = np.arange(21) * 0.05 
             #q_gs = np.arange(21) * 0.05
+            q_as = [1.0]
+            q_gs = [1.0]
 
             weight_path = os.path.join(base_path, experiment, "weights.pt")
             config_path = os.path.join(base_path, experiment, "config.yaml")
@@ -85,21 +156,39 @@ def run_testset(experiments):
             model.eval()
             model.update()
         elif experiment == "G-PCC":
-            q_as = np.arange(21, 52)
-            q_gs = [0.125, 0.1875, 0.25, 0.375, 0.5, 0.75, 0.875, 0.9375]
+            #q_as = np.arange(21, 52)
+            q_as = [51, 46, 40, 34, 28, 22]
+            q_gs = [0.0625, 0.125, 0.25, 0.5, 0.75, 0.875, 0.9375]
         elif experiment == "V-PCC":
-            #q_as = [42, 37, 32, 27, 22]
             q_as = np.arange(22, 43)
             q_gs = [32, 28, 24, 20, 16]
+        elif experiment == "IT-DL-PCC":
+            q_as = [0]
+            q_gs = [0.001, 0.002, 0.004, 0.0005, 0.00025, 0.000125]
         
 
         with torch.no_grad():
-            for s, data in enumerate(test_loader):
+            for s, sequence in enumerate(ref_paths.keys()):
+                ref_path = ref_paths[sequence]
+                pcd = o3d.io.read_point_cloud(ref_path)
+
+                # Step 2: Convert Open3D point cloud data to NumPy arrays
+                points = np.asarray(pcd.points)  # Extract points (N, 3)
+                colors = np.asarray(pcd.colors)  # Extract colors (N, 3)
+
+                # Step 3: Convert NumPy arrays to PyTorch tensors
+                points = torch.from_numpy(points).unsqueeze(0).float()  # Shape (1, N, 3)
+                colors = torch.from_numpy(colors).unsqueeze(0).float()  # Shape (1, N, 3)
+
+                # Step 4: Prepare the data in the desired format
+                data = {"src": {"points": points, "colors": colors}}
                 for j, q_g in enumerate(q_gs):
                     for i, q_a in enumerate(q_as):
                         # Get info
                         t0 = time.time()
-                        sequence = data["cubes"][0]["sequence"][0]
+
+                        block_size = block_sizes[sequence]
+
 
                         # Run model
                         if experiment not in related_work:
@@ -108,7 +197,7 @@ def run_testset(experiments):
                                                                                              data,
                                                                                              q_a, 
                                                                                              q_g, 
-                                                                                             1024,
+                                                                                             block_size,
                                                                                              device,
                                                                                              base_path)
                         else:
@@ -118,44 +207,9 @@ def run_testset(experiments):
                                                                                                 q_g,
                                                                                                 base_path)
 
-                        tmp_path = os.path.join(base_path,
-                                                experiment)
-                        results = utils.pc_metrics(ref_paths[data["cubes"][0]["sequence"][0]], 
-                                                     rec_pc, 
-                                                     "dependencies/mpeg-pcc-tmc2/bin/PccAppMetrics",
-                                                     tmp_path,
-                                                     resolution=resolutions[sequence])
-
-                        results["pcqm"] = utils.pcqm(ref_paths[data["cubes"][0]["sequence"][0]], 
-                                                     rec_pc, 
-                                                     "dependencies/PCQM/build",
-                                                     tmp_path)
-
-                        # Save results
-                        results["bpp"] = bpp
-                        results["sequence"] = data["cubes"][0]["sequence"][0]
-                        results["frameIdx"] = data["cubes"][0]["frameIdx"][0].item()
-                        results["t_compress"] = t_compress
-                        results["t_decompress"] = t_decompress
-                        results["q_a"] = q_a
-                        results["q_g"] = q_g
-                        experiment_results.append(results)
-
-                        torch.cuda.empty_cache()
-                        t1 = time.time() - t0
-                        total = len(test_loader) * len(q_as) * len(q_gs)
-                        done = (s * len(q_as) * len(q_gs)) + (i * len(q_gs)) + j + 1
-                        print("[{}/{}] Experiment: {} | Sequence: {} @ q_a:{:.2f} q_g:{:.2f} | {:2f}s | PCQM:{:4f} bpp:{:2f}".format(done,
-                                                                                                                                     total,
-                                                                                                                                     experiment,
-                                                                                                                               sequence, 
-                                                                                                                               q_a, 
-                                                                                                                               q_g,  
-                                                                                                                               t1,
-                                                                                                                               results["pcqm"],
-                                                                                                                               results["bpp"]))
                         # Renders of the pointcloud
-                        point_size = 1.0 if data["cubes"][0]["sequence"][0] in ["longdress", "soldier", "loot", "longdress"] else 2.0
+                        point_size = 0.1 if sequence in ["longdress", "soldier", "loot", "longdress"] else 0.2
+                        point_size = 0.1
                         path = os.path.join(base_path,
                                             experiment, 
                                             "renders_test",
@@ -168,6 +222,45 @@ def run_testset(experiments):
                                             "renders_test",
                                             "{}_original_{}.png".format(sequence, "{}"))
                         utils.render_pointcloud(source_pc, path, point_size=point_size)
+                        tmp_path = os.path.join(base_path,
+                                                experiment)
+
+                        rec_pc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamRadius(radius=5.0))
+                        results = utils.pc_metrics(ref_path, 
+                                                     rec_pc, 
+                                                     "dependencies/mpeg-pcc-dmetric-master/test/pc_error",
+                                                     tmp_path,
+                                                     resolution=resolutions[sequence])
+                        results["pcqm"] = utils.pcqm(ref_path, 
+                                                     rec_pc, 
+                                                     "dependencies/PCQM/build",
+                                                     tmp_path)
+
+
+                        # Save results
+                        results["bpp"] = bpp
+                        results["sequence"] = sequence
+                        results["frameIdx"] = 0 #TODO
+                        results["t_compress"] = t_compress
+                        results["t_decompress"] = t_decompress
+                        results["q_a"] = q_a
+                        results["q_g"] = q_g
+                        experiment_results.append(results)
+
+                        torch.cuda.empty_cache()
+                        t1 = time.time() - t0
+                        total = len(test_loader) * len(q_as) * len(q_gs)
+                        done = (s * len(q_as) * len(q_gs)) + (i * len(q_gs)) + j + 1
+                        print("[{}/{}] Experiment: {} | Sequence: {} @ q_a:{:.2f} q_g:{:.2f} | {:2f}s | PCQM:{:4f} bpp:{:2f} t_comp:{:2f}s ".format(done,
+                                                                                                                                     total,
+                                                                                                                                     experiment,
+                                                                                                                               sequence, 
+                                                                                                                               q_a, 
+                                                                                                                               q_g,  
+                                                                                                                               t1,
+                                                                                                                               results["pcqm"],
+                                                                                                                               results["bpp"],
+                                                                                                                               t_compress + t_decompress))
                         """
                         fig, ax = plt.subplots(figsize=(2, 4), layout='constrained')
                         cbar = fig.colorbar(ScalarMappable(norm=norm, cmap="magma"),
@@ -216,7 +309,7 @@ def run_testset(experiments):
                     # Save the results as .csv
                     df = pd.DataFrame(experiment_results)
                     results_path = os.path.join(base_path, experiment, "test.csv")
-                    df.to_csv(results_path)
+                    #df.to_csv(results_path)
 
 
 

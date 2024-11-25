@@ -13,7 +13,8 @@ plt.rcParams.update({
     'ytick.labelsize': 7,              # Font size for y-tick labels
     'lines.linewidth': 1.5,              # Default line width
     'lines.markersize': 3,             # Default marker size
-    'legend.fontsize': 8,              # Font size for legend
+    #'legend.fontsize': 8,              # Font size for legend
+    'legend.fontsize': 6,              # Font size for legend (Smaller for supplementary material)
     'legend.frameon': True,            # Legend frame on
     'legend.framealpha': 1.0,          # Legend frame opacity
     'axes.axisbelow': True,            # Place grid and ticks below plot elements
@@ -104,13 +105,14 @@ runs = {
             {"sota_comparison": "YOGA"},
         "bd_points": {
             "8iVFBv2" : [ (8, 3), (12, 6), (18, 10),  (20, 20)],
+            #"8iVFBv2" : [ (3, 8), (6, 12), (10, 18),  (20, 20)],
         },
         "pareto_ranges": {"bpp": [0.0, 2.0], "pcqm": [0.98, 0.9975], "sym_y_psnr": [22, 30], "sym_yuv_psnr": [22, 1.00], "sym_p2p_psnr": [60, 70]},
         "colors": colors[4],
         "linestyles": linestyles[4],
         "markers": markers[4],
     },
-    "Final_L2_GDN_scale_rescale_ste_offsets_shepard_2" : {
+    "CVPR_inverse_nn_shepard" : {
         "label": 
             {"sota_comparison": "Ours",
              "ablation_scaling": "asymmetric gain",
