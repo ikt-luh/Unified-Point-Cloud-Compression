@@ -4,9 +4,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import MinkowskiEngine as ME
 
-from utils import sort_points, sort_tensor
+from unified.utils import sort_points, sort_tensor
 
-from compressai.entropy_models import EntropyBottleneck, GaussianConditional, EntropyBottleneckVbr
+from compressai.entropy_models import EntropyBottleneck, GaussianConditional
 from compressai.models.base import CompressionModel
 from compressai.ops import ops, LowerBound
 

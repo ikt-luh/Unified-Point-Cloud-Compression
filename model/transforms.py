@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import MinkowskiEngine as ME
 
-from model.blocks import *  
+from unified.model.blocks import *  
 
 
 class AnalysisTransform(nn.Module):

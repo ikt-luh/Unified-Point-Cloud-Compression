@@ -1,3 +1,4 @@
+import time
 import torch
 import numpy as np
 import MinkowskiEngine as ME
@@ -107,6 +108,7 @@ class ColorModel(CompressionModel):
         shape: list
             List of shapes, only returned if path=None
         """
+        t0 = time.time()
         N = x.shape[0]
 
         # Apply downscaling to coordinates if scaling_factor != 1.0
@@ -131,6 +133,8 @@ class ColorModel(CompressionModel):
         block_coordinates = []
         block_q_vals = []
         block_k = []
+        t1 = time.time()
+        print("Preprocessing: " + str(t1 - t0))
 
         start_idx = 0
         for i, count in enumerate(counts.tolist()):
@@ -157,15 +161,25 @@ class ColorModel(CompressionModel):
                                         device=x_block.device)
             
 
+            torch.cuda.synchronize()
+            t2 = time.time()
             # Analysis Transform
             y, q_vals, k = self.g_a(input_block, Q)
+            torch.cuda.synchronize()
+            t3 = time.time()
+            print("Analysis: " + str(t3 - t2))
 
             # Entropy Bottleneck Compression
             #_ , strings, shape = self.entropy_model.compress(y)        
 
             # MOO Compression
+            torch.cuda.synchronize()
+            t4 = time.time()
             _ , strings, shape = self.entropy_model.compress(y, Q)
             block_q_vals.append(Q)
+            torch.cuda.synchronize()
+            t5 = time.time()
+            print("Bottleneck: " + str(t5 - t4))
 
             block_coordinates.append(y.C)  # Save block coordinates
             block_shapes.append(shape)
