@@ -56,7 +56,7 @@ class AnalysisTransform(nn.Module):
         
         
 
-    def forward(self, x, q):
+    def forward(self, x):
         """
         Forward pass for the analysis transform
 
@@ -85,7 +85,7 @@ class AnalysisTransform(nn.Module):
         x = self.down_conv_3(x)
 
         k.reverse()
-        return x, q, k
+        return x, k
 
 
 
