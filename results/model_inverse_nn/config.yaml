@@ -4,7 +4,7 @@ clip_grad_norm: 1.0
 data_path: ./data/datasets/full_128
 device: '0'
 epochs: 300
-experiment_name: Final_L2_GDN_scale_rescale_ste_offsets_inverse_nn_vbr_btlnk
+experiment_name: model_inverse_nn
 loss:
   ColorLoss:
     loss: L2
