@@ -155,7 +155,7 @@ class SparseSynthesisTransform(torch.nn.Module):
 
 
 
-    def forward(self, x, q_value, coords=None, k=None):
+    def forward(self, x, coords=None, k=None):
         """
         Forward pass for the synthesis transform
 
