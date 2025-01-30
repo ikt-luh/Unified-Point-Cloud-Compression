@@ -2,34 +2,30 @@ import yaml
 import os
 import argparse
 import random
+import torch
+import torch.optim as optim
 import numpy as np
-
-from tqdm import tqdm
-
 import open3d as o3d 
 import pandas as pd
 import MinkowskiEngine as ME
+from tqdm import tqdm
 
-import torch
-import torch.optim as optim
+
+import utils
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose
-
 from data.dataloader import StaticDataset
 from data.transform import build_transforms
 from data.utils.util import custom_collate_fn
-from data.q_map import Q_Map
-
+from data.q_func import Q_Func
 from metrics.metric import PointCloudMetric
-
 from model.model import UnifiedModel
 from loss import Loss
-import utils
 
 TQDM_BAR_FORMAT_TRAIN = "[Train]\t{l_bar}{bar:10}{r_bar}\t"
 TQDM_BAR_FORMAT_VAL = "[Val]\t{l_bar}{bar:10}{r_bar}\t"
 
-# Determinism
+# Determinism and Seeding
 os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
 torch.manual_seed(0)
 random.seed(0)
@@ -44,11 +40,17 @@ def seed_worker(worker_id):
 g = torch.Generator()
 g.manual_seed(0)
 
-class Training():
-    def __init__(self, config_path):
-        self.load_config(config_path)
 
-        # Setup Folders
+class Training():
+    """
+    Training class for unified geometry and color compression
+    """
+    def __init__(self, config_path):
+        """
+        Parameters:
+            config_path (str): Path to the configuration
+        """
+        self.load_config(config_path)
         self.setup_folders()
 
         # Training Settings
@@ -102,7 +104,7 @@ class Training():
                                      batch_size=1,                                       
                                      shuffle=False)
 
-        self.q_map = Q_Map(self.config["q_map"])
+        self.q_func = Q_Func(self.config["q_map"])
 
         self.results = []
         self.epoch = 0
@@ -119,8 +121,7 @@ class Training():
 
     def setup_folders(self):
         """
-        Sets up the training:
-            - Initialize folder structure for results
+        Sets up the training folder structure
         """
         # Initialize Results folder structure
         self.results_directory = os.path.join(self.config["results_path"], self.config["experiment_name"])
@@ -138,8 +139,10 @@ class Training():
             os.mkdir(ckpts_dir)
 
 
-
     def check_resume(self):
+        """
+        Check if a training for the config has already been done and resume from checkpoint
+        """
         path = os.path.join(self.results_directory, "ckpts")
         ckpts = os.listdir(path)
         ckpts.sort()
@@ -151,12 +154,15 @@ class Training():
 
         
     def train(self):
+        """
+        Training main loop.
+        """
         path = os.path.join(self.results_directory, "weights.pt")
         for epoch in range(self.epoch, self.config["epochs"]):
             # Training
             self.train_epoch(epoch)
-            #self.val_epoch(epoch)
 
+            # Val for peaking current results
             if ((epoch + 1)%10 == 0):
                 self.val_epoch(epoch)
 
@@ -169,16 +175,24 @@ class Training():
         self.model.update()
         torch.save(self.model.state_dict(), path)
 
+
     def train_epoch(self, epoch):
+        """
+        Training for one epoch (1 pass of the trainset)
+
+        Parameters:
+            epoch (int):
+                Current epoch for data wrangling.
+        """
         self.model.train()
 
         loss_avg = utils.AverageMeter()
         aux_loss_avg = utils.AverageMeter()
 
         pbar = tqdm(self.train_loader, bar_format=TQDM_BAR_FORMAT_TRAIN)
-        pbar.set_description("[{}: {}/{}]".format(self.config["experiment_name"], 
-                                                  str(epoch + 1), 
-                                                  str(self.config["epochs"])))
+        pbar.set_description("[{}: {:03d}/{:03d}]".format(self.config["experiment_name"], 
+                                                  int(epoch + 1), 
+                                                  int(self.config["epochs"])))
         for i, data in enumerate(pbar):
             self.model_optimizer.zero_grad()
             self.bottleneck_optimizer.zero_grad()
@@ -186,7 +200,6 @@ class Training():
             coords, feats = ME.utils.collation.sparse_collate(data["points"], 
                                                               data["colors"], 
                                                               device=self.device)
-
 
             # Quantize coordinates to remove duplicates
             coords, feats = ME.utils.sparse_quantize(
@@ -200,16 +213,15 @@ class Training():
                                     coordinates=coords,
                                     device=self.device)
             
-            Q, Lambda = self.q_map(input)
-            output = self.model(input, Q, Lambda)
+            q, Lambda = self.q_func(input)
+            output = self.model(input, q, Lambda)
 
             # Backward for model
             loss_value, loss_dict = self.loss(input, output)
             loss_avg.update(loss_value.item())
             loss_value.backward()
 
-            torch.cuda.empty_cache() # Needed?
-
+            torch.cuda.empty_cache() 
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 
                                           self.config["clip_grad_norm"])
 
@@ -226,16 +238,22 @@ class Training():
             pbar_dict = {}
             pbar_dict["Loss"] = "{:.2e}".format(loss_avg.avg)
             pbar_dict["Aux_Loss"] = "{:.2e}".format(aux_loss_avg.avg)
-            #for key, value in loss_dict.items():
-                #pbar_dict[key] = "{:.2e}".format(self.log.get_avg([self.finished_epochs, "training", key]))
             pbar.set_postfix(pbar_dict)
 
+
+
     def val_epoch(self, epoch):
+        """
+        One validation epoch, operating through compression on full dataset
+        """
         self.model.eval()
         self.model.update()
         
         with torch.no_grad():
             pbar = tqdm(self.val_loader, bar_format=TQDM_BAR_FORMAT_VAL)
+            pbar.set_description("[{}: {:04d}/{:04d}]".format(self.config["experiment_name"], 
+                                                    int(epoch + 1), 
+                                                    int(self.config["epochs"])))
 
             for _, data in enumerate(pbar):
                 # Prepare data
@@ -269,7 +287,7 @@ class Training():
                         source_pc = utils.get_o3d_pointcloud(source)
                         rec_pc = utils.get_o3d_pointcloud(reconstruction)
 
-                        # Compute metrics
+                        # Compute metrics (Internal implementation)
                         metric = PointCloudMetric(source_pc, rec_pc)
                         results, error_vectors = metric.compute_pointcloud_metrics(drop_duplicates=True)
 
@@ -293,9 +311,14 @@ class Training():
         results_path = os.path.join(self.results_directory, "val.csv")
         df.to_csv(results_path)
 
+
     def save_checkpoint(self, epoch):
         """
         Save a checkpoint of the model
+
+        Parameters:
+            epoch (int):
+                Current epoch for indexing
         """
         self.model.update()
 
@@ -314,10 +337,9 @@ class Training():
         """
         Load a checkpoint of the model
         
-        Parameters
-        ----------
-        path: str
-            Path to load
+        Parameters:
+            path (str):
+                Path to the checkpoint
         """
         checkpoint = torch.load(path)
         self.epoch = checkpoint["epoch"]
@@ -334,9 +356,7 @@ def parse_options():
     Parse options into a Options object
     """
     parser = argparse.ArgumentParser()
-    # Training options
-    parser.add_argument("--config", type=str, default="./configs/MeanScale_5_lambda200-3200.yaml", help="Configuration for training")
-    #Parse into option class
+    parser.add_argument("--config", type=str, default="./configs/CVPR_inverse_nn.yaml", help="Configuration for training")
     args = parser.parse_args()
     return args
 

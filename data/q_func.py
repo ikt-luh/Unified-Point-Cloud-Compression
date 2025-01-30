@@ -3,7 +3,7 @@ import random
 import math
 import MinkowskiEngine as ME
 
-class Q_Map(object):
+class Q_Func(object):
     """
     Generator for Quality maps
     """
