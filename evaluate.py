@@ -38,20 +38,6 @@ ref_paths = {
      "dancer" : "./data/datasets/Owlii/dancer_vox11_00000001.ply",
      "exercise" : "./data/datasets/Owlii/exercise_vox11_00000001.ply",
      "model" : "./data/datasets/Owlii/model_vox11_00000001.ply",
-
-
-     #"thaidancer" : "./data/datasets/raw/jpeg_testset/Thaidancer_viewdep_vox12.ply",
-     #"bouquet" : "./data/datasets/raw/jpeg_testset/RWT130Bouquet.ply",
-     #"stmichael" : "./data/datasets/raw/jpeg_testset/RWT70StMichael.ply",
-     #"soldier" : "./data/datasets/raw/jpeg_testset/soldier_vox10_0690.ply",
-     #"boxer" : "./data/datasets/raw/jpeg_testset/boxer_viewdep_vox12.ply",
-     #"House" : "./data/datasets/raw/jpeg_testset/House_without_roof_00057_vox12.ply",
-     #"CITISUP" : "./data/datasets/raw/jpeg_testset/CITIUSP_vox13.ply",
-     #"Facade" : "./data/datasets/raw/jpeg_testset/Facade_00009_vox12.ply",
-     #"EPFL" : "./data/datasets/raw/jpeg_testset/EPFL_vox13.ply",
-     #"Arco" : "./data/datasets/raw/jpeg_testset/Arco_Valentino_Dense_vox12.ply",
-     #"shiva" : "./data/datasets/raw/jpeg_testset/Shiva_00035_vox12.ply",
-     #"Unicorn" : "./data/datasets/raw/jpeg_testset/ULB_Unicorn_vox13_n.ply",
      }
 resolutions ={
      "longdress" : 1023, 
@@ -62,52 +48,24 @@ resolutions ={
      "dancer" : 2047, 
      "model" : 2047, 
      "exercise" : 2047, 
-
-     "boxer" : 4095,
-     "thaidancer" : 4095,
-     "bouquet" : 1023,
-     "stmichael" : 1023,
-     "CITISUP" : 8191,
-     "EPFL" : 8191,
-     "Facade" : 4095,
-     "House" : 4095,
-     "shiva" : 4095,
-     "Unicorn" : 8191,
-     "Arco" : 4095,
 }
 block_sizes ={
      "soldier" : 1024, 
      "longdress" : 1024, 
      "loot" : 1024, 
      "redandblack" : 1024, 
-
      "model" : 512, 
      "exercise" : 512, 
      "dancer" : 512, 
      "basketball_player" : 512, 
-
-     "boxer" : 512,
-     "thaidancer" : 512,
-     "bouquet" : 512,
-     "stmichael" : 1024,
-     "CITISUP" : 512,
-     "EPFL" : 512,
-     "Facade" : 512,
-     "House" : 512,
-     "shiva" : 1024,
-     "Unicorn" : 1024,
-     "Arco" : 1024,
 }
 
 
 device_id = 0
 experiments = [
-    #"Ours",
-    #"V-PCC",
     #"G-PCC",
     #"IT-DL-PCC",
 
-    #"Final_L2_GDN_scale_rescale_ste_offsets_shepard_2"
     #"CVPR_inverse_scaling_shepard"
     #"CVPR_inverse_scaling_fixed_R1",
     #"CVPR_inverse_scaling_fixed_R2",
@@ -117,7 +75,6 @@ experiments = [
 
 related_work = [
     "G-PCC",
-    "V-PCC",
     "IT-DL-PCC",
 ]
 
@@ -127,22 +84,14 @@ def run_testset(experiments):
     torch.cuda.set_device(device)
 
     torch.no_grad()
-        
-    # Dataloader
-    test_set = StaticDataset(data_path, split="test", transform=None, partition=False)
-    test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
 
     for experiment in experiments:
         experiment_results = []
 
         # Set model and QPs
         if experiment not in related_work:
-            #q_as = np.arange(11) * 0.1
-            #q_gs = np.arange(11) * 0.1
-            #q_as = np.arange(21) * 0.05 
-            #q_gs = np.arange(21) * 0.05
-            q_as = [1.0]
-            q_gs = [1.0]
+            q_as = np.arange(11) * 0.1
+            q_gs = np.arange(11) * 0.1
 
             weight_path = os.path.join(base_path, experiment, "weights.pt")
             config_path = os.path.join(base_path, experiment, "config.yaml")
@@ -249,7 +198,7 @@ def run_testset(experiments):
 
                         torch.cuda.empty_cache()
                         t1 = time.time() - t0
-                        total = len(test_loader) * len(q_as) * len(q_gs)
+                        total = len(ref_paths.keys()) * len(q_as) * len(q_gs)
                         done = (s * len(q_as) * len(q_gs)) + (i * len(q_gs)) + j + 1
                         print("[{}/{}] Experiment: {} | Sequence: {} @ q_a:{:.2f} q_g:{:.2f} | {:2f}s | PCQM:{:4f} bpp:{:2f} t_comp:{:2f}s ".format(done,
                                                                                                                                      total,
