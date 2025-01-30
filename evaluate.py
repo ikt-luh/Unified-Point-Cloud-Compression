@@ -13,7 +13,7 @@ import subprocess
 from plyfile import PlyData
 
 import utils
-from model.model import ColorModel
+from model.model import UnifiedModel
 from data.dataloader import StaticDataset
 from metrics.metric import PointCloudMetric
 
@@ -99,7 +99,7 @@ def run_testset(experiments):
             with open(config_path, "r") as config_file:
                 config = yaml.safe_load(config_file)
 
-            model = ColorModel(config["model"])
+            model = UnifiedModel(config["model"])
             model.load_state_dict(torch.load(weight_path))
             model.to(device)
             model.eval()

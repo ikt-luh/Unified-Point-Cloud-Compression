@@ -1,25 +1,29 @@
+import os
 import torch
+import subprocess
 import numpy as np
+import open3d as o3d
 import MinkowskiEngine as ME
 from compressai.models.base import CompressionModel
-
-import os
-import subprocess
-import open3d as o3d
 from bitstream import BitStream
 
+import utils
 from .entropy_models import *
 from .transforms import *
 
-import utils
 
-class ColorModel(CompressionModel):
+class UnifiedModel(CompressionModel):
+    """
+    Unified Compression Model class described in the paper.
+    """
     def __init__(self, config):
+        """
+        Parameters:
+            config (dict): Configuration file, required to contain configs for g_a, g_s and entropy_model
+        """
         super().__init__()
-
         self.g_a = AnalysisTransform(config["g_a"])
         self.g_s = SparseSynthesisTransform(config["g_s"])
-
         self.entropy_model = MeanScaleHyperprior(config["entropy_model"])
 
 
@@ -30,7 +34,6 @@ class ColorModel(CompressionModel):
         self.entropy_model.update(force=True)
 
 
-
     def aux_loss(self):
         """
         Get the aux loss of the entropy model
@@ -39,37 +42,43 @@ class ColorModel(CompressionModel):
     
 
 
-    def forward(self, x, Q, Lambda):
+    def forward(self, x, q, Lambda):
         """
-        Parameters
-        ----------
-        x : ME.SparseTensor
-            Input Tensor of geometry and features
+        Forward pass through the model required for training.
+
+        Parameters:
+            x (ME.SparseTensor):
+                Input Tensor of geometry and features
+            q (torch.tensor):
+                Quality Configuration tensor
+            Lambda (torch.tensor):
+                Lambda values corresponding to q for loss computation
+        Returns:
+            output (dict):
+                Dictionary containing relevant results for loss computation
+                - prediction (ME.SparseTensor): reconstruction
+                - points (list): List of ground-truth points for multi-scale upsampling
+                - occ_predictions (list): List of occupancy prediction scores at each level of upsampling
+                - q_map (torch.tensor): Lambda values for the batch
+                - likelihoods (list): Likelihoods for the Rate loss, containing Hyperprior and Gaussian Entropy Model likelihoods
         """
-        # Save coords for decoding
+        # Save coords for decoding 
+        x = ME.SparseTensor(coordinates=x.C.clone(),
+                            features=torch.cat([torch.ones((x.C.shape[0], 1), device=x.device), x.F], dim=1))
         coords = ME.SparseTensor(coordinates=x.C.clone(),
                                  features=torch.ones(x.C.shape[0], 1),
                                  device=x.device)
 
-        # Pad input tensor
-        x = ME.SparseTensor(coordinates=x.C.clone(),
-                            features=torch.cat([torch.ones((x.C.shape[0], 1), device=x.device), x.F], dim=1))
-
         # Analysis Transform
-        y, Q, k = self.g_a(x, Q)
+        y, k = self.g_a(x)
 
         # Entropy Bottleneck
-        y_hat, likelihoods = self.entropy_model(y, Q)
-
-        # Split coords after entropy coding
-        likelihoods = {"y": likelihoods[0], "z": likelihoods[1]}
-
+        y_hat, likelihoods = self.entropy_model(y, q)
 
         # Synthesis Transform(s)
-        ####  x_hat, points, predictions = self.g_s(y_hat, Q_hat, coords=coords, k=k)
-        x_hat, points, predictions = self.g_s(y_hat, Q, coords=coords, k=k)
+        x_hat, points, predictions = self.g_s(y_hat, coords=coords, k=k)
         
-        # Building Output dictionaries
+        likelihoods = {"y": likelihoods[0], "z": likelihoods[1]}
         output = {
             "prediction": x_hat,
             "points": points,
@@ -82,47 +91,40 @@ class ColorModel(CompressionModel):
 
 
 
-    def compress(self, x, Q, path=None, block_size=1024, scaling_factor=1.0):
+    def compress(self, pointcloud, q, path=None, block_size=1024, scaling_factor=1.0):
         """
         Compress a point cloud with optional block partitioning and downscaling.
     
-        Parameters
-        ----------
-        x: torch.tensor, shape Nx6
-            Tensor containing the point cloud, N is the number of points.
-            Coordinates as first 3 dimensions, colors as last 3
-        Q: Quantization parameter or data structure
-        path: str (default=None)
-            Path to store the binaries to. If None, the compression is mocked.
-        block_size: int (default=100000)
-            Maximum number of points per block. If N > block_size, point cloud is partitioned.
-        scaling_factor: float (default=1.0)
-            Factor to downscale coordinates during compression (1.0 means no scaling).
+        Parameters:
+            pointcloud (torch.tensor):
+                Tensor containing the point cloud, N is the number of points.
+                Coordinates as first 3 dimensions, colors as last 3
+            q (torch.tensor):
+                Quality configuration parameter or data structure
+            path (str, default=None):
+                Path to store the binaries to. If None, the compression is mocked.
+            block_size (int, default=1024):
+                Maximum block size  per block. Partitioning is used if the block is to large.
+            scaling_factor: float (default=1.0)
+                Factor to downscale coordinates during compression (1.0 means no scaling).
     
-        Returns
-        -------
-        strings: list
-            List of strings (bitstreams), only returned if path=None
-        shape: list
-            List of shapes, only returned if path=None
+        Returns:
+            strings (list):
+                List of strings (bitstreams), only returned if path=None
+            shape (list):
+                List of shapes, only returned if path=None
         """
-        N = x.shape[0]
-
-        # Apply downscaling to coordinates if scaling_factor != 1.0
+        # Optional Scaling
         if scaling_factor != 1.0:
-            x[:, :3] = torch.round(x[:, :3] / scaling_factor).int()
+            pointcloud[:, :3] = torch.round(pointcloud[:, :3] / scaling_factor).int()
 
-        min_coords = torch.min(x[:, :3], dim=0)[0]
-
-        block_indices = ((x[:, :3] - min_coords) / block_size).floor().int()
-
-        # Sort points by block indices (to group points from the same block together)
+        # Block Partitioning
+        min_coords = torch.min(pointcloud[:, :3], dim=0)[0]
+        block_indices = ((pointcloud[:, :3] - min_coords) / block_size).floor().int()
         sorted_indices = torch.argsort(block_indices[:, 0] * 1e6 + block_indices[:, 1] * 1e3 + block_indices[:, 2])
-        x_sorted = x[sorted_indices]
+        x_sorted = pointcloud[sorted_indices]
         block_indices_sorted = block_indices[sorted_indices]
-
-        # Find unique block indices and their starting positions
-        unique_blocks, unique_indices, counts = torch.unique_consecutive(block_indices_sorted, dim=0, return_inverse=True, return_counts=True)
+        _, _, counts = torch.unique_consecutive(block_indices_sorted, dim=0, return_inverse=True, return_counts=True)
 
         # Split the point cloud into blocks if it exceeds the block_size
         bitstreams = []
@@ -132,7 +134,7 @@ class ColorModel(CompressionModel):
         block_k = []
 
         start_idx = 0
-        for i, count in enumerate(counts.tolist()):
+        for count in counts.tolist():
             end_idx = start_idx + count
             x_block = x_sorted[start_idx:end_idx]
 
@@ -141,41 +143,46 @@ class ColorModel(CompressionModel):
             points = torch.cat([batch_vec, x_block[:, :3].contiguous()], dim=1).to(x_block.device)
             colors = x_block[:, 3:6].contiguous().to(x_block.device)
 
-            # Minkowski Tensor
+            # Create torch tensor
             input_block = ME.SparseTensor(coordinates=points,
                                         features=colors,
                                         device=x_block.device)
+
+            # Quantize
             coords, feats = ME.utils.sparse_quantize(
                 coordinates=input_block.C,
                 features=input_block.F,
                 quantization_size=1.0
             )
 
-            input_block = ME.SparseTensor(coordinates=coords.int(),
+            # Collect
+            x = ME.SparseTensor(coordinates=coords.int(),
                                         features=torch.cat([torch.ones((coords.shape[0], 1), device=x_block.device), feats], dim=1),
                                         device=x_block.device)
             
 
             # Analysis Transform
-            y, q_vals, k = self.g_a(input_block, Q)
+            y, k = self.g_a(x)
 
-            # Entropy Bottleneck Compression
-            #_ , strings, shape = self.entropy_model.compress(y)        
+            # Latent Codec Compression
+            _ , strings, shape = self.entropy_model.compress(y, q)
 
-            # MOO Compression
-            _ , strings, shape = self.entropy_model.compress(y, Q)
-            block_q_vals.append(Q)
-
-            block_coordinates.append(y.C)  # Save block coordinates
+            block_q_vals.append(q)
+            block_coordinates.append(y.C)  
             block_shapes.append(shape)
             block_k.append(k)
             bitstreams.append(strings)
+
             start_idx = end_idx
 
-        # Combine block results into one bitstream (for saving)
+        # Return componenets or write to bitstream on disk
         if path:
-            self.save_bitstream(path=path, blocks_coordinates=block_coordinates, blocks_strings=bitstreams, blocks_shapes=block_shapes, blocks_k=block_k, blocks_q=block_q_vals)
-            #self.save_bitstream(path=path, blocks_coordinates=block_coordinates, blocks_strings=bitstreams, blocks_shapes=block_shapes, blocks_k=block_k)
+            self.save_bitstream(path=path, 
+                                blocks_coordinates=block_coordinates, 
+                                blocks_strings=bitstreams, 
+                                blocks_shapes=block_shapes, 
+                                blocks_k=block_k, 
+                                blocks_q=block_q_vals)
         else:
             return bitstreams, block_shapes, block_k, block_coordinates, block_q_vals
 
@@ -183,54 +190,51 @@ class ColorModel(CompressionModel):
 
     def decompress(self, path=None, coordinates=None, strings=None, shape=None, k=None, q_vals=None):
         """
-        Decompress a point cloud bitstream.
+        Decompress a point cloud from a bitstream or it's components.
+        If path is given, the point cloud will be decompressed from the bitstream at path, otherwise, all components
+        are required.
     
-        Parameters
-        ----------
-        path: str
-            Path of the point cloud bitstream.
-        coordinates: torch.tensor
-            Point Cloud geometry required to decode the attributes.
-        strings: list
-            List of strings (bitstreams), only returned if path=None.
-        shape: list
-            List of shapes, only returned if path=None.
-        k: list
-            Number of points at each stage.
+        Parameters:
+            path (str):
+                Path of the point cloud bitstream.
+            coordinates (torch.tensor):
+                Point Cloud geometry of y required to decode the attributes, required if path=None
+            strings (list):
+                List of strings (bitstreams), only returned if path=None.
+            shape (list):
+                List of shapes, only returned if path=None.
+            k (list):
+                Number of points at each stage, required if path=None
     
         Returns
-        -------
-        x_hat: torch.tensor, Nx6
-            Decompressed and reconstructed point cloud.
+            x_hat (torch.tensor)
+                Decompressed and reconstructed point cloud.
         """
         device = self.g_s.down_conv.kernel.device
+
+        # Load data from bitstream if path is given
         if path:
             coordinates, strings, shape, k, q_vals = self.load_bitstream(path)
-            #coordinates, strings, shape, k = self.load_bitstream(path)
             for i, _ in enumerate(coordinates):
                 block_coords = coordinates[i].to(device) 
                 batch_vec = torch.zeros((block_coords.shape[0], 1), device=block_coords.device)
                 coordinates[i] = torch.cat([batch_vec, block_coords.contiguous()], dim=1)
                 q_vals[i] = q_vals[i].to(device) 
-                #q_vals = []
 
-        # Decompress blocks
         x_hat_list = []
         for i, (block_strings, block_shape, block_coords, block_k) in enumerate(zip(strings, shape, coordinates, k)):
-            # Perform entropy decoding and synthesis transform
-
+            # Compute latent coordinates
             latent_coordinates_2 = ME.SparseTensor(coordinates=block_coords.clone(), features=torch.ones((block_coords.shape[0], 1)), tensor_stride=8, device=block_coords.device)
             latent_coordinates_2 = self.g_s.down_conv(latent_coordinates_2)
             latent_coordinates_2 = self.g_s.down_conv(latent_coordinates_2)
             points = [block_coords, latent_coordinates_2.C]
 
-            #y_hat, Q_hat = self.entropy_model.decompress(points, block_strings, block_shape)
+            # Latent Codec decompression
             y_hat = self.entropy_model.decompress(points, block_strings, block_shape, q_vals[i])
         
-            # Perform synthesis
-            if not len(q_vals)==0:
-                Q_hat = q_vals[i]
-            x_hat = self.g_s(y_hat, Q_hat, k=block_k)
+            # Synthesis Transform
+            x_hat = self.g_s(y_hat, k=block_k)
+
             x_hat_list.append(x_hat)
     
         # Concatenate results
@@ -240,28 +244,29 @@ class ColorModel(CompressionModel):
         features_concat = torch.cat(features_list, dim=0)
         coords_concat = torch.cat(coords_list, dim=0)
 
+        # Round to int8 colors (in float format)
         features_processed = torch.clamp(torch.round(features_concat * 255), 0.0, 255.0) / 255
         x_hat = torch.cat([coords_concat[:, 1:4], features_processed], dim=1)
         return x_hat
 
 
-    #def save_bitstream(self, path, blocks_coordinates, blocks_strings, blocks_shapes, blocks_k):
     def save_bitstream(self, path, blocks_coordinates, blocks_strings, blocks_shapes, blocks_k, blocks_q):
         """
         Save multiple blocks to a bitstream.
 
         Parameters
-        ----------
-        path: str
-            Path to store the data.
-        blocks_coordinates: list of torch.tensor
-            List of coordinates for each block.
-        blocks_strings: list of lists
-            List of bitstreams corresponding to each block.
-        blocks_shapes: list of lists
-            List of shapes for each block's feature representation.
-        blocks_k: list of lists
-            Number of points at each stage for each block.
+            path (str):
+                Path to store the data
+            blocks_coordinates (list):
+                List of coordinates for each block.
+            blocks_strings (list):
+                List of bitstreams corresponding to each block.
+            blocks_shapes (list):
+                List of shapes for each block's feature representation.
+            blocks_k (list):
+                Number of points at each stage for each block.
+            blocks_q (list):
+                Q vals for each block
         """
         stream = BitStream()
 
@@ -269,7 +274,7 @@ class ColorModel(CompressionModel):
         num_blocks = len(blocks_coordinates)
         stream.write(num_blocks, np.int32)
 
-        # For each block, save the block's data using the existing save_bitstream logic
+        # Save blocks
         for i in range(num_blocks):
             points = blocks_coordinates[i]
             strings = blocks_strings[i]
@@ -277,12 +282,10 @@ class ColorModel(CompressionModel):
             k = blocks_k[i]
             q = blocks_q[i]
 
-            # Save each block using the original single-block method
-            # Encode points with G-PCC and write the shape, points bitstream, strings, and k values
+            # Encode points with G-PCC
             points_bitstream = self.gpcc_encode(points, path)
 
             ## Write block header
-            # Shape
             stream.write(shape, np.int32)
             stream.write(len(points_bitstream), np.int32)
             stream.write(q[0, 0].cpu(), np.float64)
@@ -312,21 +315,21 @@ class ColorModel(CompressionModel):
         """
         Load the bitstream from disk for multiple blocks.
 
-        Parameters
-        ----------
-        path: str
-            Path to the bitstream file.
+        Parameters:
+            path (str):
+                Path to the bitstream file.
 
-        Returns
-        -------
-        blocks_coordinates: list
-            List of coordinates for each block.
-        blocks_strings: list
-            List of bitstreams for each block.
-        blocks_shapes: list
-            Shapes of feature representations for each block.
-        blocks_k: list
-            Number of points at each stage for each block.
+        Returns:
+            blocks_coordinates (list):
+                List of coordinates for each block.
+            blocks_strings (list):
+                List of bitstreams corresponding to each block.
+            blocks_shapes (list):
+                List of shapes for each block's feature representation.
+            blocks_k (list):
+                Number of points at each stage for each block.
+            blocks_q (list):
+                Q vals for each block
         """
         # Initialize BitStream and load the file
         stream = BitStream()
@@ -384,7 +387,16 @@ class ColorModel(CompressionModel):
 
     def gpcc_encode(self, points, directory):
         """
-        Encode a list of points with G-PCC
+        Losslessly encode points with G-PCC.
+        Parameters:
+            points (torch.tensor):
+                points to be encoded
+            direcotry (string):
+                directory to temporarly save data for G-PCC call
+        
+        Returns:
+            data (string):
+                Bitstream of the G-PCC encoded points
         """
         directory, _ = os.path.split(directory)
         tmp_dir = os.path.join(directory, "points_enc.ply")
@@ -410,13 +422,12 @@ class ColorModel(CompressionModel):
                                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Read stdout and stderr
-        stdout, stderr = subp.communicate()
+        _, stderr = subp.communicate()
 
         # Print the outputs
         if subp.returncode != 0:
             print("Error occurred:")
             print(stderr.decode())
-            c=subp.stdout.readline()
 
         # Read the bytes to return
         with open(bin_dir, "rb") as binary:
@@ -431,26 +442,39 @@ class ColorModel(CompressionModel):
 
 
     def gpcc_decode(self, bin, directory):
+        """
+        Decode points with G-PCC.
+        Parameters:
+            bin (String):
+                Binary String of the G-PCC bitstream.
+            direcotry (string):
+                directory to temporarly save data for G-PCC call
+        
+        Returns:
+            points (torch.tensor):
+                Decoded points
+        """
         directory, _ = os.path.split(directory)
         tmp_dir = os.path.join(directory, "points_dec.ply")
         bin_dir = os.path.join(directory, "points_dec.bin")
         
-        # Write to file
+        # Write bitstream to file
         bit_string = bin.__str__()
         byte_array = bytes(int(bit_string[i:i+8], 2) for i in range(0, len(bit_string), 8))
 
         with open(bin_dir, "wb") as binary:
             binary.write(byte_array)
+
         subp=subprocess.Popen('./dependencies/mpeg-pcc-tmc13/build/tmc3/tmc3'+ 
                                 ' --mode=1'+ 
                                 ' --compressedStreamPath='+bin_dir+ 
                                 ' --reconstructedDataPath='+tmp_dir+
                                 ' --outputBinaryPly=0',
                                 shell=True, stdout=subprocess.PIPE)
+
         c=subp.stdout.readline()
         while c:
             c=subp.stdout.readline()
-            #print(c)
     
         # Load ply
         pcd = o3d.io.read_point_cloud(tmp_dir)

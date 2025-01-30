@@ -22,7 +22,7 @@ from data.q_map import Q_Map
 
 from metrics.metric import PointCloudMetric
 
-from model.model import ColorModel
+from model.model import UnifiedModel
 from loss import Loss
 import utils
 
@@ -56,7 +56,7 @@ class Training():
         torch.cuda.set_device(self.device)
         
         # Model
-        self.model = ColorModel(self.config["model"])
+        self.model = UnifiedModel(self.config["model"])
         self.model.to(self.device)
 
         # Optimizer
