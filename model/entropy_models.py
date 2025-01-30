@@ -6,7 +6,7 @@ import MinkowskiEngine as ME
 
 from utils import sort_points, sort_tensor
 
-from compressai.entropy_models import EntropyBottleneck, GaussianConditional, EntropyBottleneckVbr
+from compressai.entropy_models import EntropyBottleneck, GaussianConditional #, EntropyBottleneckVbr
 from compressai.models.base import CompressionModel
 from compressai.ops import ops, LowerBound
 

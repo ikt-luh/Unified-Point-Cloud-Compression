@@ -100,7 +100,7 @@ def parse_args():
     parser.add_argument("--data_path", type=str, default="./datasets/raw")
     parser.add_argument("--temp_path", type=str, default="./datasets/tmp")
     parser.add_argument("--config_path", type=str, default="./config/download_paths.yaml")
-    parser.add_argument("--datasets", type=str, default="mvub, 8iVFBv2, uvg-vpc")
+    parser.add_argument("--datasets", type=str, default="uvg-vpc")
 
     args = parser.parse_args()
     return args

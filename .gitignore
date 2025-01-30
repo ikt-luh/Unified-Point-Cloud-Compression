@@ -21,3 +21,5 @@
 
 results/*
 !results/.gitkeep
+
+dependencies/*
