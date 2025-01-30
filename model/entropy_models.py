@@ -3,14 +3,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import MinkowskiEngine as ME
+from compressai.ops import ops, LowerBound
+from compressai.models.base import CompressionModel
+from compressai.entropy_models import EntropyBottleneck, GaussianConditional #, EntropyBottleneckVbr
 
 from utils import sort_points, sort_tensor
 
-from compressai.entropy_models import EntropyBottleneck, GaussianConditional #, EntropyBottleneckVbr
-from compressai.models.base import CompressionModel
-from compressai.ops import ops, LowerBound
 
 class SortedMinkowskiConvolution(ME.MinkowskiConvolution):
+    """
+    A Sorted MinkowskiConvolution to allow deterministic computation on the same hardware
+    """
     def forward(self, input):
         # Sort the coordinates
         weights = torch.tensor([1e12, 1e8, 1e4, 1], device=input.device) 
@@ -42,7 +45,9 @@ class SortedMinkowskiConvolution(ME.MinkowskiConvolution):
 
 
 class SortedMinkowskiGenerativeConvolutionTranspose(ME.MinkowskiGenerativeConvolutionTranspose):
-
+    """
+    A Sorted MinkowskiConvolution to allow deterministic computation on the same hardware
+    """
     def forward(self, input):
         # Sort the coordinates
         weights = torch.tensor([1e12, 1e8, 1e4, 1], device=input.device) 
@@ -73,6 +78,9 @@ class SortedMinkowskiGenerativeConvolutionTranspose(ME.MinkowskiGenerativeConvol
         return output
 
 class SortedMinkowskiLeakyReLU(ME.MinkowskiLeakyReLU):
+    """
+    A Sorted MinkowskiLeakyReLU implementation to allow deterministic computation on the same hardware
+    """
     def forward(self, input):
         # Sort the coordinates
         weights = torch.tensor([1e12, 1e8, 1e4, 1], device=input.device) 
@@ -102,17 +110,19 @@ class SortedMinkowskiLeakyReLU(ME.MinkowskiLeakyReLU):
 
         return output
 
-class MeanScaleHyperprior_Map(CompressionModel):
+class MeanScaleHyperprior(CompressionModel):
     def __init__(self, config):
         """
-        Paramters
-        ---------
-            C_bottleneck: int
-                Number of channels in the bottlneck
-            C_hyper_bottlneck: int
-                Number of channels in the bottlneck of the hyperprior model
-            N: int
-                Number of channels in between
+        Paramters:
+            config (dict): Configurations for the model
+                - C_bottleneck (int): Number of channels in the bottleneck
+                - C_hyper_bottleneck (int): Number of channels in the hyper bottleneck
+                - inverse_rescaling (bool): Use inverse rescaling
+                - quantization_mode (string): Quantization mode (options: )
+                - entropy_bottleneck_vbr (bool): Use VBR hyper bottleneck
+                - adaptive_BN (bool): Use adaptive bottleneck
+                - quantization_offset (bool): Use quantization offsets
+
         """
         super().__init__()
         C_bottleneck = config["C_bottleneck"]
@@ -172,7 +182,6 @@ class MeanScaleHyperprior_Map(CompressionModel):
             nn.Linear(C_bottleneck//4, C_bottleneck),
             nn.Softplus(),
         )
-        # Compute Quantization offsets from gain and stdev
         self.quant_nn = nn.Sequential(
             nn.Linear(2, 10),
             nn.ReLU(),
@@ -182,45 +191,36 @@ class MeanScaleHyperprior_Map(CompressionModel):
         )
 
 
-
-
-
-    def scale_per_batch(self, x, scale, batch_indices):
-        """
-        Scale tensor x per batch
-        batch_indices : N
-        x: 1, C, N
-        scale: B, C
-        """
-        y = x.clone()
-        num_batches = int(torch.max(batch_indices) + 1)
-        for i in range(num_batches):
-            mask = (batch_indices == i)
-
-            result = scale[i].unsqueeze(1) * x[0, :, mask]
-            y[0, :, mask] = result
-        return y
-
     def get_offsets(self, stddev, scale):
         """
-        Scale tensor x per batch
-        batch_indices : N
-        x: 1, C, N
-        scale: B, C
+        Helper function to get offsets from stddevs and scale 
+
+        Parameters:
+            stddev (torch.tensor): Tensor containing offsets
+            scale (torch.tensor): Tensor containing scales
+        Returns:
+            offsets (torch.tensor): Offsets per element 
         """
         combined_inputs = torch.cat((scale.unsqueeze(dim=3), stddev.unsqueeze(dim=3)), dim=3)  
+        offsets = self.quant_nn(combined_inputs).squeeze(dim=3)
+        return offsets
 
-        result = self.quant_nn(combined_inputs).squeeze(dim=3)
-
-        return result
 
     def forward(self, y, q):
+        """
+        Forward pass for training. 
+        Parameters:
+            y (ME.SparseTensor): Sparse Tensor containing the features
+            q (torch.tensor): Quality values for the batch
+        """
         z = self.h_a(y)
 
         z_feats = z.F.t().unsqueeze(0)
         y_feats = y.F.t().unsqueeze(0)
 
         y_batch_indices = y.C[:, 0]
+        
+        # Adaptive Bottleneck Computation
         if self.adaptive_BN:
             scale = self.scale_nn(q) + self.eps
             if self.entropy_bottleneck_vbr:
@@ -228,8 +228,10 @@ class MeanScaleHyperprior_Map(CompressionModel):
             
             scale = scale[y_batch_indices].t().unsqueeze(0)
             if self.inverse_rescaling:
-                rescale = torch.tensor(1.0) / scale.clone().detach() #TODO: is this a good idea?
+                # Rescale is the reciprocal of scale
+                rescale = torch.tensor(1.0) / scale.clone().detach() 
             else:
+                # Using a NN to compute the rescaling factors
                 rescale = torch.tensor(1.0) / self.rescale_nn(q)
                 rescale = rescale[y_batch_indices].t().unsqueeze(0)
         else: 
@@ -239,8 +241,10 @@ class MeanScaleHyperprior_Map(CompressionModel):
 
 
         if self.quantization_mode == "uniform":
+            # Additive Uniform Noise Quantization Proxy
             z_hat, z_likelihoods = self.entropy_bottleneck(z_feats)
         else:
+            # Straight-Through Quantization Proxy
             if self.entropy_bottleneck_vbr:
                 z_qstep = self.lower_bound_zqstep(z_qstep)
                 z_qstep = z_qstep[y_batch_indices].t().unsqueeze(0)
@@ -251,27 +255,29 @@ class MeanScaleHyperprior_Map(CompressionModel):
                 z_feats = z_feats - z_offset
                 z_hat = ops.quantize_ste(z_feats) + z_offset
 
-        # Reconstruct z_hat
         z_hat = ME.SparseTensor(features=z_hat[0].t(), 
                                 coordinates=z.C,
                                 tensor_stride=32,
                                 device=z.device)
 
-        # Hyper synthesis
+        # Estimate the Parameters for the Gaussian Entropy Model
         gaussian_params = self.h_s(z_hat)
         gaussian_params_feats = gaussian_params.features_at_coordinates(y.C.float())
         scales_hat, means_hat = gaussian_params_feats.chunk(2, dim=1)
         scales_hat = scales_hat.t().unsqueeze(0)
         means_hat = means_hat.t().unsqueeze(0) 
 
-        # Find the right scales
+        # Gaussian Entropy Model
         if self.quantization_offset:
+            # Uses quantization offsets
             y_feats_tmp = scale * (y_feats - means_hat)
             signs = torch.sign(y_feats_tmp).detach()
 
             if self.quantization_mode == "uniform":
+                # Additive Uniform Noise Quantization Proxy
                 y_q_abs = quantize_noise(torch.abs(y_feats_tmp))
             else:
+                # Straight-Through Quantization Proxy
                 y_q_abs = ops.quantize_ste(torch.abs(y_feats_tmp))
 
             _, y_likelihoods = self.gaussian_conditional(
@@ -279,15 +285,16 @@ class MeanScaleHyperprior_Map(CompressionModel):
                 scales_hat * scale,
                 means= means_hat * scale
             )
-            y_q_stdev = self.gaussian_conditional.lower_bound_scale(scales_hat * scale)
 
-            # Get offsets from stdev and scale (Per element)
+            # Computation of quantization offsets
+            y_q_stdev = self.gaussian_conditional.lower_bound_scale(scales_hat * scale)
             q_offsets = (-1) * self.get_offsets(y_q_stdev, scale.clone().detach())
             q_offsets[y_q_abs < 0.0001] = (0)
 
             y_hat = signs * (y_q_abs + q_offsets)
             y_hat = y_hat * rescale + means_hat
         else:
+            # No quantization offsets
             y_hat, y_likelihoods = self.gaussian_conditional(
                 y_feats * scale,
                 scales_hat * scale,
@@ -301,7 +308,7 @@ class MeanScaleHyperprior_Map(CompressionModel):
                                 tensor_stride=8,
                                 device=y.device)
 
-        return y_hat, None, (y_likelihoods, z_likelihoods)
+        return y_hat, (y_likelihoods, z_likelihoods)
 
 
 

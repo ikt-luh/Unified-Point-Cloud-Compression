@@ -10,3 +10,4 @@ compressai==1.2.4
 pandas==2.0.2
 requests==2.31.0
 bitstream==3.1b1
+plyfile==1.1

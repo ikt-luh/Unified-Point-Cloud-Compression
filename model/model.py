@@ -20,7 +20,7 @@ class ColorModel(CompressionModel):
         self.g_a = AnalysisTransform(config["g_a"])
         self.g_s = SparseSynthesisTransform(config["g_s"])
 
-        self.entropy_model = MeanScaleHyperprior_Map(config["entropy_model"])
+        self.entropy_model = MeanScaleHyperprior(config["entropy_model"])
 
 
     def update(self):
@@ -59,8 +59,7 @@ class ColorModel(CompressionModel):
         y, Q, k = self.g_a(x, Q)
 
         # Entropy Bottleneck
-        #y_hat, Q_hat, likelihoods = self.entropy_model(y)
-        y_hat, Q_hat, likelihoods = self.entropy_model(y, Q)
+        y_hat, likelihoods = self.entropy_model(y, Q)
 
         # Split coords after entropy coding
         likelihoods = {"y": likelihoods[0], "z": likelihoods[1]}
