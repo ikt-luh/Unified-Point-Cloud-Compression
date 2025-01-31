@@ -94,6 +94,10 @@ def run_testset(experiments):
             q_as = [0]
             q_gs = [0.001, 0.002, 0.004, 0.0005, 0.00025, 0.000125]
         
+        if os.path.exists("./dependencies/mpeg-pcc-dmetric-master/test/pc_error"):
+            use_mpeg_metrics = True
+        else:
+            use_mpeg_metrics = False
 
         for s, sequence in enumerate(ref_paths.keys()):
             ref_path = ref_paths[sequence]
@@ -149,11 +153,18 @@ def run_testset(experiments):
                     rec_pc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamRadius(radius=5.0))
 
                     # Metric computations
-                    results = utils.pc_metrics(ref_path, 
-                                                    rec_pc, 
-                                                    "dependencies/mpeg-pcc-dmetric-master/test/pc_error",
-                                                    tmp_path,
-                                                    resolution=resolutions[sequence])
+                    if use_mpeg_metrics:
+                        results = utils.pc_metrics(ref_path, 
+                                                        rec_pc, 
+                                                        "dependencies/mpeg-pcc-dmetric-master/test/pc_error",
+                                                        tmp_path,
+                                                        resolution=resolutions[sequence])
+                    else:
+                        #source = utils.get_o3d_pointcloud(source_pc)
+                        #rec = utils.get_o3d_pointcloud(rec_pc)
+                        metric = PointCloudMetric(source_pc, rec_pc, resolution=resolutions[sequence], drop_duplicates=False)
+                        results, error_vectors = metric.compute_pointcloud_metrics(drop_duplicates=True)
+
                     results["pcqm"] = utils.pcqm(ref_path, 
                                                     rec_pc, 
                                                     "dependencies/PCQM/build",

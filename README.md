@@ -89,8 +89,11 @@ mkdir build && cd build
 cmake ..
 make
 ```
-
-
+### Metrics
+If you have access to the mpeg-pcc-dmetric repositry, install and compile it into the dependencies folder.
+The results in the paper where computed using aformentioned repository.
+We supply a simplified python metric implementation as fallback solution to compute the metrics. 
+The evaluation script checks for the mpeg implementation and resorts to fallback if it is not in the dependencies folder.
 
 ### Preparing the Dataset
 We use the [8iVFBv2](http://plenodb.jpeg.org/pc/8ilabs) and the [Owlii](https://plenodb.jpeg.org/pc/microsoft) dataset for testing. 
