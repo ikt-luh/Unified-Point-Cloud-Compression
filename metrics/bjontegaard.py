@@ -80,8 +80,7 @@ class Bjontegaard_Model:
 
 
 if __name__ == "__main__":
-    # Results of Zhu et al. ," View-Dependent Dynamic Point Cloud Compression"
-    # on soldier, D1
+    # Test of the BD model
     bitrates1 = [22.35, 12.93, 8.27, 4.53]
     bitrates2 = [24.35, 13.93, 9.27, 6.53]
     d1 = [71.17, 69.54, 67.62, 65.77]

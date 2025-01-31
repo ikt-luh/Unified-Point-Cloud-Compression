@@ -5,7 +5,7 @@ import MinkowskiEngine as ME
 
 class Q_Func(object):
     """
-    Generator for Quality maps
+    Generator for Quality values and lambdas
     """
     def __init__(self, config):
         self.mode = config["mode"]
@@ -23,40 +23,49 @@ class Q_Func(object):
 
     def __call__(self, geometry):
         """
-        Documentation
+        Generate the quality map for a point cloud
         
-        Parameters
-        ----------
-        geometry: ME.SparseTensor
-            Description
+        Parameters:
+            geometry (ME.SparseTensor):
+                Input geometry
         
-        returns
-        -------
-        q_map: ME.SparseTensor
-            Q_Map of the data
+        Returns:
+            q_vals (torch.tensor):
+                q_values for the data
+            lambda_vals (torch.tensor):
+                lambda_values for the data
         """
         batch_indices = torch.unique(geometry.C[:, 0])
 
-        q_map = torch.zeros((torch.max(batch_indices)+1, 2), device=geometry.device)
-        q_map[:, 0] = random.uniform(0, 1)
-        q_map[:, 1] = random.uniform(0, 1)
+        q_vals = torch.zeros((torch.max(batch_indices)+1, 2), device=geometry.device)
+        q_vals[:, 0] = random.uniform(0, 1)
+        q_vals[:, 1] = random.uniform(0, 1)
 
         # Scale 
-        lambda_map = self.scale_q_map(q_map)
-        return q_map, lambda_map
+        lambda_map = self.scale_q_vals(q_vals)
+        return q_vals, lambda_map
 
 
-    def scale_q_map(self, q_map):
+    def scale_q_vals(self, q_vals):
         """
-        Scales the q_map to receive a Lambda map for loss computation
+        Scales the q_vals to receive a Lambda map for loss computation using the 
+        scaling function from the config.
+
+        Parameters:
+            q_vals (torch.tensor):
+                Quality values
+
+        Returns:
+            lambda_vals (torch.tensor)
+                Corresponding lambda values
         """
-        lambda_map_features = q_map.clone()
+        lambda_vals = q_vals.clone()
         if self.mode == "exponential":
-            lambda_map_features[:, 0] = 2**(lambda_map_features[:, 0] * self.a_G) + self.b_G
-            lambda_map_features[:, 1] = 2**(lambda_map_features[:, 1] * self.a_A) + self.b_A
+            lambda_vals[:, 0] = 2**(lambda_vals[:, 0] * self.a_G) + self.b_G
+            lambda_vals[:, 1] = 2**(lambda_vals[:, 1] * self.a_A) + self.b_A
         elif self.mode == "quadratic":
-            lambda_map_features[:, 0] = lambda_map_features[:, 0]**2 * self.a_G + self.b_G
-            lambda_map_features[:, 1] = lambda_map_features[:, 1]**2 * self.a_A + self.b_A
+            lambda_vals[:, 0] = lambda_vals[:, 0]**2 * self.a_G + self.b_G
+            lambda_vals[:, 1] = lambda_vals[:, 1]**2 * self.a_A + self.b_A
         else:
-            raise ValueError("Unknown Q_map mode")
-        return lambda_map_features
+            raise ValueError("Unknown mapping mode")
+        return lambda_vals

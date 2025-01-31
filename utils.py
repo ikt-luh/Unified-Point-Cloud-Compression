@@ -9,7 +9,7 @@ import time
 class AverageMeter(object):
     """
     Computes and stores the average and current value
-    Copied from: https://github.com/pytorch/examples/blob/master/imagenet/main.py
+    Source: https://github.com/pytorch/examples/blob/master/imagenet/main.py
     """
     def __init__(self):
         self.reset()
@@ -31,15 +31,13 @@ def count_bits(strings):
     """
     Computes the bpp for a nested array of strings
     
-    Parameters
-    ----------
-    strings: list
-        Nested list of strings
+    Parameters:
+        strings (list):
+            Nested list of strings
     
-    returns
-    -------
-    total_bits: int
-        Total bits required to save the nested list
+    Returns:
+        total_bits (int):
+            Total bits required to save the nested list
     """
     total_bits = 0
     for string in strings:
@@ -47,7 +45,6 @@ def count_bits(strings):
             total_bits += len(string) * 8
         else:
             total_bits += count_bits(string)
-        
     return total_bits
 
 
@@ -56,21 +53,17 @@ def get_o3d_pointcloud(pc):
     """
     Generates a o3d point cloud on cpu from a torch tensor.
 
-    Parameters
-    ----------
-    pc: torch.tensor, Nx6 or Nx3
-        Tensor representing the point cloud
+    Parameters:
+        pc (torch.tensor):
+            Tensor representing the point cloud
 
-    returns
-    -------
-    o3d_pc: o3d.geometry.PointCloud
-        Point Cloud object in o3d
+    Returns:
+        o3d_pc (o3d.geometry.PointCloud):
+            Point Cloud object in o3d
     """
     o3d_pc = o3d.geometry.PointCloud()
-    
     o3d_pc.points = o3d.utility.Vector3dVector(pc[:, :3].cpu().numpy())
     o3d_pc.colors = o3d.utility.Vector3dVector(pc[:, 3:].cpu().numpy())
-
     return o3d_pc
 
 
@@ -78,11 +71,10 @@ def render_pointcloud(pc, path, point_size=1.0):
     """
     Render the point cloud from 6 views along x,y,z axis
 
-    Parameters
-    ----------
-    pc: o3d.geometry.PointCloud
+    Parameters:
+    pc (o3d.geometry.PointCloud):
         Point Cloud to be rendered
-    path: str
+    path (str):
         Format String with a open key field for formatting
     """
     settings = {
@@ -95,22 +87,18 @@ def render_pointcloud(pc, path, point_size=1.0):
     }
 
     # Path
-    dir, file = os.path.split(path)
+    dir, _ = os.path.split(path)
     if not os.path.exists(dir):
         os.mkdir(dir)
 
     vis = o3d.visualization.Visualizer()
     vis.create_window(visible=True)
     vis.add_geometry(pc)
-    # Adjust the point size
     render_options = vis.get_render_option()
-    render_options.point_size = 1.5  * point_size # adjust the size as required
+    render_options.point_size = 1.5  * point_size 
 
     for key, view in settings.items():
-        # Get view control
         view_control = vis.get_view_control()
-
-        # Fit the object into the scene
         view_control.set_front(view[0])
         view_control.set_up(view[1])
         view_control.set_zoom(0.8)
@@ -126,16 +114,15 @@ def render_pointcloud(pc, path, point_size=1.0):
 def downsampled_coordinates(coordinates, factor, batched=False):
     """
     Compute the remaining coordinates after downsampling by a factor
+    TODO: MIGHT BE UNUSED, remove potentially
 
     Parameters
-    ----------
     coordinates: ME.SparseTensor
         Tensor containing the orignal coordinates
     factor: int
         Downsampling factor (mutliple of 2)
 
     returns
-    -------
     coords: torch.tensor
         Unique coordinates of the tensor
     """
@@ -156,15 +143,13 @@ def sort_tensor(sparse_tensor):
     """
     Sort the coordinates of a tensor
 
-    Parameters
-    ----------
-    sparse_tensor: ME.SparseTensor
-        Tensor containing the orignal coordinates
+    Parameters:
+        sparse_tensor (ME.SparseTensor):
+            Tensor containing the orignal coordinates
 
-    returns
-    -------
-    sparse_tensor: ME.SparseTensor
-        Tensor containing the sorted coordinates
+    Returns:
+        sparse_tensor (ME.SparseTensor):
+            Tensor containing the sorted coordinates
     """
     # Sort the coordinates
     weights = torch.tensor([1e15, 1e10, 1e5, 1], dtype=torch.int64, device=sparse_tensor.device) 
@@ -185,15 +170,13 @@ def sort_points(points):
     """
     Sort the coordinates of torch list sized Nx4
 
-    Parameters
-    ----------
-    points: torch.tensor
-        Tensor containing the orignal coordinates Nx4
+    Parameters:
+        points (torch.tensor):
+            Tensor containing the orignal coordinates Nx4
 
-    returns
-    -------
-    points: torch.tensor
-        Tensor containing the sorted coordinates Nx4
+    Returns:
+        points (torch.tensor):
+            Tensor containing the orignal coordinates Nx4
     """
     # Sort the coordinates
     weights = torch.tensor([1e15, 1e10, 1e5, 1], dtype=torch.int64, device=points.device) 
@@ -205,52 +188,43 @@ def sort_points(points):
 
 def pc_metrics(reference, distorted, metric_path, data_path, resolution):
     """
-    Compute PCQM with 
+    Compute pointcloud metrics using the mpeg pcc metrics implementation
+    if available, else use our own implementation 
 
-    Parameters
-    ----------
-    reference: o3d.geometry.PointCloud | string
-        Reference Point Cloud or path to it
-    distorted: o3d.geometry.PointCloud
-        Distorted Point Cloud
-    pcqm_path: str
-        Path to the PCQM binary
-    settings: dictionary (default=None)
-        Extra Settings for metrics
+    Parameters:
+        reference (o3d.geometry.PointCloud | string)
+            Reference Point Cloud or path to it
+        distorted (o3d.geometry.PointCloud):
+            Distorted Point Cloud
+        metric_path (str):
+            Path to mpeg-pcc-metric binary
+        resolution (int):
+            Voxel resolution for PSNR normalization
 
-    returns
-    -------
-    pcqm: float
-        PCQM value
+    Returns:
+    metrics (dict):
+        Dictionary containing the results of the metric computation
     """
+    # Folder initialization
     data_path = os.path.join(data_path, "tmp")
     if not os.path.exists(data_path):
         os.mkdir(data_path)
 
-    # Save reference if o3d
+    # Reference to disk
     if isinstance(reference, o3d.geometry.PointCloud):
         ref_path = os.path.join(data_path, "ref.ply") 
         save_ply(ref_path, reference)
     else:
         ref_path = os.path.join(reference)
 
-    # Save distorted
+    # Distorted to disk
     if isinstance(distorted, o3d.geometry.PointCloud):
         distorted_path = os.path.join(data_path, "distorted.ply") 
         save_ply(distorted_path, distorted, has_normals=True)
     else:
         distorted_path = os.path.join(distorted)
 
-    # Call PCQM
-    """
-    command = [metric_path,
-               '--uncompressedDataPath={}'.format(ref_path),
-               '--reconstructedDataPath={}'.format(distorted_path),
-               '--normalDataPath={}'.format(ref_path),
-               '--resolution={}'.format(resolution),
-               '--frameCount=1'
-                ]
-    """
+    # Calling external mpeg-pcc-metric
     command = [metric_path,
                '--fileA={}'.format(ref_path),
                '--fileB={}'.format(distorted_path),
@@ -259,8 +233,7 @@ def pc_metrics(reference, distorted, metric_path, data_path, resolution):
                 ]
     result = subprocess.run(command, stdout=subprocess.PIPE)
 
-
-    # read output
+    # Parse outputs to metric dict
     string = result.stdout
     lines = string.decode().split('\n')
     start = 0
@@ -275,7 +248,6 @@ def pc_metrics(reference, distorted, metric_path, data_path, resolution):
         metrics[prefix[j] + "p2p_mse"] = float(lines[start+1].split(':')[-1].strip())
         metrics[prefix[j] + "p2p_psnr"] = float(lines[start+2].split(':')[-1].strip())
 
-        # only symmetric
         metrics[prefix[j] + "d2_mse"] = float(lines[start+3].split(':')[-1].strip())
         metrics[prefix[j] + "d2_psnr"] = float(lines[start+4].split(':')[-1].strip())
         start += 2
@@ -287,7 +259,7 @@ def pc_metrics(reference, distorted, metric_path, data_path, resolution):
         metrics[prefix[j] + "u_psnr"] = float(lines[start+7].split(':')[-1].strip())
         metrics[prefix[j] + "v_psnr"] = float(lines[start+8].split(':')[-1].strip())
 
-        # Compute YUV
+        # Compute YUV (using weights 0.75, 0.125, 0.125)
         metrics[prefix[j] + "yuv_psnr"] = (1/8) * (6 * metrics[prefix[j] + "y_psnr"] + metrics[prefix[j] + "u_psnr"] + metrics[prefix[j] + "v_psnr"])
         metrics[prefix[j] + "yuv_mse"] = (1/8) * (6 * metrics[prefix[j] + "y_mse"] + metrics[prefix[j] + "u_mse"] + metrics[prefix[j] + "v_mse"])
 
@@ -299,22 +271,21 @@ def pcqm(reference, distorted, pcqm_path, data_path, settings=None):
     """
     Compute PCQM with 
 
-    Parameters
-    ----------
-    reference: o3d.geometry.PointCloud | string
-        Reference Point Cloud or path to it
-    distorted: o3d.geometry.PointCloud
-        Distorted Point Cloud
-    pcqm_path: str
-        Path to the PCQM binary
-    settings: dictionary (default=None)
-        Extra Settings for PCQM
+    Parameters:
+        reference (o3d.geometry.PointCloud | string):
+            Reference Point Cloud or path to it
+        distorted (o3d.geometry.PointCloud):
+            Distorted Point Cloud
+        pcqm_path (str):
+            Path to the PCQM binary
+        settings (dictionary, default=None):
+            Extra Settings for PCQM
 
-    returns
-    -------
-    pcqm: float
-        PCQM value
+    Returns:
+        pcqm: float
+            PCQM value
     """
+    # Initialization
     cwd = os.getcwd()
     pcqm_path = os.path.join(cwd, pcqm_path)
     os.chdir(pcqm_path)
@@ -322,14 +293,14 @@ def pcqm(reference, distorted, pcqm_path, data_path, settings=None):
     if not os.path.exists(data_path):
         os.mkdir(data_path)
 
-    # Save reference if o3d
+    # Save reference to disk
     if isinstance(reference, o3d.geometry.PointCloud):
         ref_path = os.path.join(data_path, "ref.ply") 
         save_ply(ref_path, reference)
     else:
         ref_path = os.path.join(cwd, reference)
 
-    # Save distorted
+    # Save distorted to disk
     if isinstance(distorted, o3d.geometry.PointCloud):
         distorted_path = os.path.join(data_path, "distorted.ply") 
         save_ply(distorted_path, distorted)
@@ -340,22 +311,24 @@ def pcqm(reference, distorted, pcqm_path, data_path, settings=None):
     command = [pcqm_path + "/PCQM", ref_path, distorted_path, "-fq", "-r 0.004", "-knn 20", "-rx 2.0"]
     result = subprocess.run(command, stdout=subprocess.PIPE)
 
-    # read output
+    # Parse output to pcqm result
     string = result.stdout
     lines = string.decode().split('\n')
-    penultimate_line = lines[-3]  # Get the penultimate line
-    pcqm_value_str = penultimate_line.split(':')[-1].strip()  # Extract the value after ':'
-    pcqm_value = float(pcqm_value_str)  # Convert the value to float
+    penultimate_line = lines[-3]
+    pcqm_value_str = penultimate_line.split(':')[-1].strip() 
+    pcqm_value = float(pcqm_value_str)  
 
     os.chdir(cwd)
-
     return pcqm_value
 
+
 def save_ply(path, ply, has_normals=False):
-    # Write the original point cloud to a PLY file in ASCII format
+    """
+    Save a point cloud to a ply file. Exchange the o3d header through our header for 
+    usage in the metric dependencies.
+    """
     o3d.io.write_point_cloud(path, ply, write_ascii=True)
 
-    # Read the written PLY file to modify its header and data
     with open(path, "r") as ply_file:
         lines = ply_file.readlines()
 
@@ -382,7 +355,6 @@ def save_ply(path, ply, has_normals=False):
     # Convert the data values from double to float
     data = np.genfromtxt(data_lines, dtype=np.float64)
 
-    # Define the structured data type
     if has_normals:
         structured_data = np.zeros(data.shape[0], dtype=[('int1', 'i4'), ('int2', 'i4'), ('int3', 'i4'),
                                                         ('normal_x', 'f4'), ('normal_y', 'f4'), ('normal_z', 'f4'),
@@ -410,15 +382,17 @@ def save_ply(path, ply, has_normals=False):
 
     # Save the modified PLY file
     with open(path, "w") as ply_file:
-        # Write the new header
         for line in new_header:
             ply_file.write(line)
-        # Write the structured data
+
         for row in structured_data:
             ply_file.write(" ".join(map(str, row)) + "\n")
         
 
 def remove_gpcc_header(path, gpcc=True):
+    """
+    Remove the header introduced by G-PCC decompression for o3d parsing (color-labels are permuted).
+    """
     with open(path, "r") as ply_file:
         lines = ply_file.readlines()
 
@@ -474,26 +448,19 @@ def compress_model_ours(experiment, model, data, q_a, q_g, block_size, device, b
         os.mkdir(bin_path)
     bin_path = os.path.join(bin_path, "bitstream.bin")
 
-    # Q Map
-    Q_map = torch.tensor([[q_g, q_a]], device=device, dtype=torch.float)
-
+    q = torch.tensor([[q_g, q_a]], device=device, dtype=torch.float)
 
     # Compression
     torch.cuda.synchronize()
     t0 = time.time()
-
-    #strings, shapes, k, coordinates = model.compress(source, Q_map)
-    model.compress(source, Q_map, block_size=block_size, path=bin_path)
-
+    model.compress(source, q, block_size=block_size, path=bin_path)
     torch.cuda.synchronize()
     t_compress = time.time() - t0
 
-    # Decompress all rates
     # Run decompression
     torch.cuda.synchronize()
     t0 = time.time()
     reconstruction = model.decompress(path=bin_path)
-    #reconstruction = model.decompress(coordinates=coordinates, strings=strings, shape=shapes, k=k)
     torch.cuda.synchronize()
     t_decompress = time.time() - t0
                     
@@ -516,13 +483,13 @@ def compress_related(experiment, data, q_a, q_g, base_path):
                         "tmp")
     if not os.path.exists(path):
         os.mkdir(path)
+
     # Directories
     src_dir = os.path.join(path, "points_enc.ply")
     rec_dir = os.path.join(path, "points_dec.ply")
     bin_dir = os.path.join(path, "points_enc.bin")
 
     N = data["src"]["points"].shape[1]
-    #sequence = data["cubes"][0]["sequence"][0]
 
     # Data processing
     dtype = o3d.core.float32
@@ -550,16 +517,6 @@ def compress_related(experiment, data, q_a, q_g, base_path):
                 '--planarModeIdcmUse=0',
                 '--convertPlyColourspace=1',
 
-                #'--transformType=2',
-                #'--numberOfNearestNeighborsInPrediction=3',
-                #'--qp={}'.format(q_a),
-                #'--adaptivePredictionThreshold=64',
-                #'--qpChromaOffset=0',
-                #'--bitdepth=8',
-                #'--attrOffset=0',
-                #'--attrScale=1',
-                #'--attribute=color',
-
                 '--transformType=0',
                 '--qp={}'.format(q_a),
                 '--qpChromaOffset=-2',
@@ -581,6 +538,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         t_compress = float(processing_time_line.split()[-2])
 
         bpp = os.path.getsize(bin_dir) * 8 / N
+
         # Decode
         command = ['./dependencies/mpeg-pcc-tmc13/build/tmc3/tmc3',
                 '--mode=1',
@@ -609,8 +567,9 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         os.remove(rec_dir)
         os.remove(src_dir)
         os.remove(bin_dir)
+
     elif experiment == "V-PCC": 
-        # Compress the point cloud using V-PCC
+        # TODO: Not complete, might want to rebuild at some point
         occPrecision = 4 if q_g > 16 else 2
         command = ['./dependencies/mpeg-pcc-tmc2/bin/PccAppEncoder',
                 '--configurationFolder=./dependencies/mpeg-pcc-tmc2/cfg/',
@@ -634,6 +593,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         t_compress = float(processing_time_line.split()[-2])
 
         bpp = os.path.getsize(bin_dir) * 8 / N
+
         # Decode
         command = ['./dependencies/mpeg-pcc-tmc2/bin/PccAppDecoder',
                 '--inverseColorSpaceConversionConfig=./dependencies/mpeg-pcc-tmc2/cfg/hdrconvert/yuv420torgb444.cfg',
@@ -658,7 +618,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
     elif experiment=="IT-DL-PCC":
         command = ['python3', './dependencies/IT-DL-PCC/src/IT-DL-PCC.py',
             '--with_color',
-            '--cuda', # Causes artifacts
+            '--cuda', 
             'compress',
             '{}'.format(src_dir),
             './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(q_g),
@@ -667,6 +627,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
             '--use_fast_topk',
             '--blk_size=256',
         ]
+
         t0 = time.time()
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         t_compress = time.time() - t0
@@ -693,6 +654,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         rec_pc = o3d.io.read_point_cloud(rec_dir)
         colors = np.asarray(rec_pc.colors)
         rec_pc.colors=o3d.utility.Vector3dVector(colors)
+
         #Cleanup
         os.remove(rec_dir)
         os.remove(src_dir)
@@ -710,15 +672,22 @@ def compress_related(experiment, data, q_a, q_g, base_path):
 def overlapping_mask(tensor1, tensor2):
     """
     Get the overlapping coordinates of two tensors
+
+    Parameters:
+        tensor1 (torch.tensor):
+            tensor 1 for which the mask is created
+        tensor2 (torch.tensor):
+            tensor 2 for checking where tensor 1 overlaps with
+    
+    Returns:
+        mask (torch.tensor):
+            Mask for tensor1 where it overlaps with tensor2
     """
-    # Define Scaling Factors
     scaling_factors = torch.tensor([1, 1e2, 1e7, 1e12], dtype=torch.int64, device=tensor1.C.device)
 
-    # Transform to unique indices
     tensor1_flat = (tensor1.C.to(torch.int64) * scaling_factors).sum(dim=1)
     tensor2_flat = (tensor2.C.to(torch.int64) * scaling_factors).sum(dim=1)
 
-   # Check for duplicates in a deterministic manner
     unique_tensor1, counts_tensor1 = torch.unique(tensor1_flat, return_counts=True)
     unique_tensor2, counts_tensor2 = torch.unique(tensor2_flat, return_counts=True)
 
@@ -730,6 +699,5 @@ def overlapping_mask(tensor1, tensor2):
     if tensor2_duplicates.numel() > 0:
         print("Duplicate values in tensor2_flat:", tensor2_duplicates)
 
-    # Mask
     mask = torch.isin(tensor1_flat, tensor2_flat)
     return mask

@@ -15,18 +15,18 @@ class StaticDataset():
 
     def __init__(self, data_dir, split, type="voxels", partition=True, min_points=0, transform=None):
         """
-        args:
-            root_dir : str
+        Parameters:
+            root_dir (str):
                 Root directory of the dataset
-            split : str
+            split (str):
                 Split of the data, options: train, test, val
-            type : str
+            type (str):
                 Type of the data: [voxels, points]
-            pointclouds : boolean
+            pointclouds (boolean):
                 Load full pointclouds, else just cubes
-            min_points: int
+            min_points (int):
                 Minimum points to be loaded, only applies to train split
-            transform: torchvision.transforms.Compose
+            transform (torchvision.transforms.Compose):
                 Object holding the data transformations, default: None
         """
         self.data_dir = data_dir
@@ -51,6 +51,7 @@ class StaticDataset():
 
     def __getitem__(self, idx):
         """
+        Retrieves an item for the dataloader
         """
         if self.partition:
             (sequence, frameIdx, cubeIdx) = self.indices[idx]
@@ -95,19 +96,20 @@ class StaticDataset():
     def prepare_split(self, data_path):
         """
         Prepare the split
+
+        Parameters:
+            data_path (str):
+                Path to the target dataset directory
         """
-        # Get config of the dataset
         config_path = os.path.join(self.data_dir, "config.yaml")
         config = self.parse_config(config_path)
         split_config = config[self.split]
 
-        #Use RawLoader to load plys with raw loading config
         current_directory = os.path.dirname(os.path.abspath((__file__)))
         raw_data_config = os.path.join(current_directory, "config", "raw_loading.yaml")
         raw_data_path = os.path.join(current_directory, "datasets", "raw")
         raw_loader = RawLoader(raw_data_path, raw_data_config)
 
-        # Prepare data structure
         data = {}
         for sequence, frames in split_config.items():
             data[sequence] = {}
@@ -131,7 +133,7 @@ class StaticDataset():
                     colors.cuda()
 
                 # Slice into cubes
-                cubes = self.slice_into_cubes2(points, colors, config["info"]["cube_size"])
+                cubes = self.slice_into_cubes(points, colors, config["info"]["cube_size"])
 
                 # and back to CPU
                 if torch.cuda.is_available():
@@ -165,64 +167,32 @@ class StaticDataset():
 
     def slice_into_cubes(self, points_tensor, colors_tensor, cube_size=64):
         """
-        Slice the point cloud into cubes based in cube size
+        Slice a pointcloud into cubes.
+
+        Parameters:
+            points_tensor (torch.tensor):
+                Point locations
+            color_tensor (torch.tensor):
+                Point colors
+            cube_size (int, default=64):
+                Target size of the cubes
+        
+        Returns:
+            cubes (list):
+                List of all cubes
+                Each cube is a dictionary with keys points, colors, offset, num_points
         """
-
-        # Calculate boundaries of the point cloud
-        max_boundary = torch.max(points_tensor, dim=0)[0]
-
-        # Calculate the number of cubes along each axis
-        num_cubes = torch.ceil((max_boundary - 0) / cube_size).int()
-
-        cubes = []
-
-        # Iterate through each cube
-        for x in range(num_cubes[0]):
-            for y in range(num_cubes[1]):
-                for z in range(num_cubes[2]):
-                    # Define cube boundaries
-                    min_cube = torch.tensor([x, y, z]) * cube_size
-                    max_cube = torch.tensor([x, y, z]) * cube_size + cube_size
-
-                    # Find points inside the current cube
-                    mask = (points_tensor >= min_cube) & (points_tensor < max_cube)
-                    mask = mask[:, 0] & mask[:, 1] & mask[:, 2]
-
-                    cube_points = points_tensor[mask] - min_cube
-                    cube_colors = colors_tensor[mask]
-
-                    # Append to the list if cube has points
-                    if len(cube_points) > 0:
-                        cube = {
-                            "points": cube_points.detach(),
-                            "colors": cube_colors.detach(),
-                            "offset": torch.tensor([x,y,z]).detach(),
-                            "num_points": torch.tensor(len(cube_points)).detach()
-                        }
-                        cubes.append(cube)
-
-        return cubes
-
-    def slice_into_cubes2(self, points_tensor, colors_tensor, cube_size=64):
-        # Calculate boundaries of the point cloud
         min_boundary = torch.tensor([0,0,0])
-        max_boundary = torch.max(points_tensor, dim=0)[0]
-
-        # Calculate cube indices for each point
         cube_indices = ((points_tensor - min_boundary) / cube_size).floor().long()
-
-        # Flatten cube indices to create a unique index for each cube
         unique_cube_indices, inverse_indices = torch.unique(cube_indices, dim=0, return_inverse=True)
 
         cubes = []
         for idx in range(unique_cube_indices.size(0)):
             mask = inverse_indices == idx
 
-            # Get points and colors belonging to this cube
             cube_points = points_tensor[mask]
             cube_colors = colors_tensor[mask]
 
-            # Adjust the points relative to the cube's origin
             cube_shift = unique_cube_indices[idx] * cube_size
             adjusted_points = cube_points - cube_shift
 
@@ -261,7 +231,15 @@ class StaticDataset():
     
     def parse_config(self, config_path):
         """
-        Parse the config to a dict with datasets, sequences and list of frames
+        Parse the config to a dict with datasets, sequences and list of frames.
+
+        Parameters:
+            config_path (str):
+                Path to the configuration
+
+        Returns:
+            config (dict):
+                Config dictionary
         """
         with open(config_path, "r") as file:
             config = yaml.safe_load(file)
@@ -275,9 +253,7 @@ class StaticDataset():
                 if not isinstance(item, str):
                     raise ValueError("Cannot parse config, all keys should be str.")
 
-                # Split by commas
                 sub_items = item.split(",")
-
                 for sub_item in sub_items:
                     # Hanlde start, end, (stride=1) notation
                     if ":" in sub_item:
@@ -289,6 +265,7 @@ class StaticDataset():
 
                         sub_range = list(range(int(elements[0]), int(elements[1])+1, stride))
                         new_item += sub_range
+
                     # Handle single indexing
                     elif isinstance(sub_item, str):
                         new_item.append(int(sub_item))
@@ -298,38 +275,3 @@ class StaticDataset():
                 config[split][key] = new_item
 
         return config
-
-        
-
-
-if __name__ == "__main__":
-    from transform import Voxelize, Devoxelize, ColorShift, RGBtoYUV, YUVtoRGB
-    from torchvision.transforms import Compose
-
-    transform = Compose([RGBtoYUV(), YUVtoRGB()])
-    trainset = StaticDataset("./datasets/dev_64", split="train", transform=transform)
-    trainset2 = StaticDataset("./datasets/full_64", split="train")
-
-    print(torch.max(trainset[0]["colors"] - trainset2[0]["colors"]))
-
-    print(len(trainset))
-    t0 = time.time()
-    for i in range(1000):
-        x = trainset2[i]
-    print((time.time() - t0) / 1000)
-    print(x.keys())
-    print(torch.max(x["points"]))
-
-    testset = StaticDataset("./datasets/full_64", split="val", partition=False, transform=ColorShift())
-    print(len(testset))
-    t0 = time.time()
-    x = testset[0]
-    print(x.keys())
-    print(time.time() - t0)
-    
-    dataloader = DataLoader(trainset, batch_size=256, shuffle=True)
-
-    t0 = time.time()
-    #data = next(iter(dataloader))
-    print(time.time() - t0)
-

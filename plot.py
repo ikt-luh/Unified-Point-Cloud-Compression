@@ -544,6 +544,8 @@ def compute_times(data):
     summary_df = pd.DataFrame(summary_data, columns=["key", "sequence", "rate", "mean_t_compress", "conf_compress", "mean_t_decompress", "conf_decompress"])
 
     print(summary_df)
+
+
+
 if __name__ == "__main__":
     plot_experiments()
-

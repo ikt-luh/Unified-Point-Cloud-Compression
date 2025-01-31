@@ -1,7 +1,6 @@
 import yaml
 import os
 import argparse
-import random
 import torch
 import torch.optim as optim
 import numpy as np
@@ -251,7 +250,7 @@ class Training():
         
         with torch.no_grad():
             pbar = tqdm(self.val_loader, bar_format=TQDM_BAR_FORMAT_VAL)
-            pbar.set_description("[{}: {:04d}/{:04d}]".format(self.config["experiment_name"], 
+            pbar.set_description("[{}: {:03d}/{:03d}]".format(self.config["experiment_name"], 
                                                     int(epoch + 1), 
                                                     int(self.config["epochs"])))
 
