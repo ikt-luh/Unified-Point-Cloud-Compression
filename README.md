@@ -12,7 +12,8 @@
 - [Citation](#citation)
 
 ## Overview
-
+The branch clean contains the code for publications.
+Additionally, the branch demo_unified contains a implementation as used for the Demo [Learned Compression in Adaptive Point Cloud Streaming: Opportunities, Challenges and Limitations](https://github.com/ikt-luh/Demo-Learned-Point-Cloud-Compression) presented at MMSys'25.
 
 ## Approach
 
@@ -140,7 +141,8 @@ python plot.py
 
 ## Citation
 
-If you find our work helpful, please consider citing us in your work:
+A paper covering quality adaptive training and the updated model architecture is currently under review.
+You can already find the pre-print covering an older model architecture under:
 ```
 @article{rudolph2024learnedcompressionpointcloud,
       title={Learned Compression of Point Cloud Geometry and Attributes in a Single Model through Multimodal Rate-Control}, 
