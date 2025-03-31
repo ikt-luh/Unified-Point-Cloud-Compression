@@ -1,14 +1,6 @@
 # Learned Compression of Point Cloud Geometry and Attributes in a Single Model through Multimodal Rate-Control 
 
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Approach](#approach)
-- [Results](#results)
-- [Usage](#usage)
-- [Citation](#citation)
-
 ## Overview
 The branch clean contains the code for the model.
 
