@@ -10,7 +10,8 @@
 - [Citation](#citation)
 
 ## Overview
-The branch clean contains the code for publications.
+The branch clean contains the code for the model.
+
 Additionally, the branch demo_unified contains a implementation as used for the Demo [Learned Compression in Adaptive Point Cloud Streaming: Opportunities, Challenges and Limitations](https://github.com/ikt-luh/Demo-Learned-Point-Cloud-Compression) presented at MMSys'25.
 
 ## Results
