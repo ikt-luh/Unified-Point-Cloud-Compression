@@ -34,7 +34,7 @@ python setup.py install --force_cuda --blas=openblas
 ```
 
 
-# Open3D
+### Open3D
 ```
 git clone https://github.com/isl-org/Open3D
 cd Open3D
@@ -55,7 +55,7 @@ make -j$(nproc)
 make install-pip-package
 ```
 
-# PCQM
+### PCQM
 ```
 git clone https://github.com/MEPP-team/PCQM.git
 mkdir PCQM/build && cd PCQM/build
@@ -63,7 +63,7 @@ cmake ..
 make
 ```
 
-# G-PCC
+### G-PCC
 ```
 git clone https://github.com/MPEGGroup/mpeg-pcc-tmc13.git
 cd mpeg-pcc-tmc13
