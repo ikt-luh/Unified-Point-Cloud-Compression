@@ -1,7 +1,5 @@
 # Learned Compression of Point Cloud Geometry and Attributes in a Single Model through Multimodal Rate-Control 
 
-[![Paper](TODO)](TODO)
-
 
 ## Table of Contents
 
@@ -15,18 +13,8 @@
 The branch clean contains the code for publications.
 Additionally, the branch demo_unified contains a implementation as used for the Demo [Learned Compression in Adaptive Point Cloud Streaming: Opportunities, Challenges and Limitations](https://github.com/ikt-luh/Demo-Learned-Point-Cloud-Compression) presented at MMSys'25.
 
-## Approach
-
-
-### Architecture
-
 ## Results
-
-
-
-### Latency
-
-### Visual Results
+Coming soon.
 
 
 ## Usage
