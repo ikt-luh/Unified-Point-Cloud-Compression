@@ -431,7 +431,7 @@ def remove_gpcc_header(path, gpcc=True):
 
 
 
-def compress_model_ours(experiment, model, data, q_a, q_g, block_size, device, base_path):
+def compress_model_ours(experiment, model, data, q_a, q_g, scaling_factor, block_size, device, base_path):
     """
     Compress a point cloud using our model
     """
@@ -453,7 +453,7 @@ def compress_model_ours(experiment, model, data, q_a, q_g, block_size, device, b
     # Compression
     torch.cuda.synchronize()
     t0 = time.time()
-    model.compress(source, q, block_size=block_size, path=bin_path)
+    model.compress(source, q, block_size=block_size, scaling_factor=scaling_factor, path=bin_path)
     torch.cuda.synchronize()
     t_compress = time.time() - t0
 

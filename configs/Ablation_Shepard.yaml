@@ -1,5 +1,5 @@
 ## General
-experiment_name: "CVPR_inverse_scaling_256"
+experiment_name: "Ablation_Shepard"
 results_path : "./results"
 
 # Model
@@ -26,8 +26,8 @@ model:
     N4: 128
 
 ## Data
-data_path: "./data/datasets/full_256"
-min_points_train: 300
+data_path: "./data/datasets/jpeg_128"
+min_points_train: 500
 min_points_test: 0
 transforms:
   train:
@@ -46,14 +46,14 @@ q_map:
   mode: "quadratic"
 
 ## Training
-device: "2"
-epochs: 300
-batch_size: 4
+device: "0"
+epochs: 600
+batch_size: 8
 virtual_batches: false
 model_learning_rate: 0.0001
 bottleneck_learning_rate: 0.001
 optimizer: "Adam"
-scheduler_step_size: 150
+scheduler_step_size: [300, 400, 500]
 scheduler_gamma: 0.1
 clip_grad_norm: 1.0
 
@@ -64,8 +64,10 @@ loss:
     alpha: 0.5
     gamma: 2.0
   ColorLoss:
-    type: "ColorLoss"
+    type: "ShepardsLoss"
     loss: "L2"
+    window_size: 9
+    p: 8
   bpp-y:
     type: "BPPLoss"
     key: "y"

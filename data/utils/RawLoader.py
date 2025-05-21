@@ -46,8 +46,8 @@ class RawLoader():
 
         point_cloud = o3d.io.read_point_cloud(ply_path)
         # Downcale for QA
-        if dataset_key == "QA":
-            downsampling_rates = {0: 1.0, 1: 2.0, 2: 4.0, 3: 8.0}
+        if dataset_key=="jpeg_train" and frame_idx != 0:
+            downsampling_rates = {0: 1.0, 1: 2.0, 2: 4.0, 3: 8.0, 4: 16.0}
             factor = downsampling_rates[frame_idx]
 
             point_cloud = point_cloud.voxel_down_sample(factor)

@@ -1,49 +1,5 @@
 # Information on the dataset
 sequences:
-  mvub:
-    andrew9: 
-      start: 0
-      end:   317
-    andrew10:
-      start: 0
-      end:   317
-    david9: 
-      start: 0
-      end:   215
-    david10:
-      start: 0
-      end:   215
-    phil9:
-      start: 0
-      end:   244
-    phil10:
-      start: 0
-      end:   244
-    ricardo9:
-      start: 0
-      end:   215
-    ricardo10:
-      start: 0
-      end:   215
-    sarah9:
-      start: 0
-      end:   206
-    sarah10:
-      start: 0
-      end:   206
-  8iVFBv2:
-    longdress:
-      start: 1051
-      end:   1350
-    loot:
-      start: 1000
-      end:   1299
-    redandblack:
-      start: 1450
-      end:   1749
-    soldier:
-      start: 536
-      end:   835
   uvg-vpc:
     BlueBackpack:
       start: 0
@@ -382,6 +338,79 @@ sequences:
     Wood:
       start: 0
       end:   3
+  jpeg_train:
+    Egyptian_mask_vox12:
+      start: 0
+      end: 4
+    Facade_00015_vox14:
+      start: 0
+      end: 4
+    Facade_00064_vox14:
+      start: 0
+      end: 4
+    Head_00039_vox12:
+      start: 0
+      end: 0
+    Landscape_00014_vox14:
+      start: 0
+      end: 4
+    Stanford_Area_2_vox16:
+      start: 0
+      end: 4
+    Stanford_Area_4_vox16:
+      start: 0
+      end: 4
+    andrew10:
+      start: 0
+      end: 0
+    basketball_player_vox11_00000200:
+      start: 0
+      end: 0
+    david10:
+      start: 0
+      end: 0
+    exercise_vox11_00000001:
+      start: 0
+      end: 0
+    football_vox11_1365600:
+      start: 0
+      end: 0
+    mitch_vox11_00001:
+      start: 0
+      end: 0
+    model_vox11_00000001:
+      start: 0
+      end: 0
+    phil10:
+      start: 0
+      end: 0
+    ricardo10:
+      start: 0
+      end: 0
+    sarah10:
+      start: 0
+      end: 0
+    the20smaria_00600_vox11:
+      start: 0
+      end: 0
+    thomassenic_vox11_00170:
+      start: 0
+      end: 0
+    ulliwegner_01400_vox11:
+      start: 0
+      end: 0
+    queen_0200_n:
+      start: 0
+      end: 0
+    dancer_vox11_00000001:
+      start: 0
+      end: 0
+    ipanemaCut_vox12:
+      start: 0
+      end: 1
+    Frog_00067_vox12:
+      start: 0
+      end: 1
 
 
 
@@ -391,3 +420,4 @@ relative_paths:
   uvg-vpc: "{sequence}/{sequence}/ply_vox10/ply_xyz_rgb/{sequence}_UVG_vox10_25_0_250_{frame_idx:04d}.ply"
   8iVFBv2: "{sequence}/{sequence}/Ply/{sequence}_vox10_{frame_idx:04d}.ply"
   QA: "QA/{sequence}.ply"
+  jpeg_train: "jpeg_train/{sequence}.ply"

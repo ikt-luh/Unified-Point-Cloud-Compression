@@ -1,5 +1,5 @@
 ## General
-experiment_name: "CVPR_inverse_nn"
+experiment_name: "Ablation_lambdaFunc_exponential"
 results_path : "./results"
 
 # Model
@@ -9,7 +9,7 @@ model:
     C_bottleneck: 128
     C_hyper_bottleneck: 192
     quantization_mode: "ste"
-    inverse_rescaling: False
+    inverse_rescaling: True
     quantization_offset: True
     entropy_bottleneck_vbr: False
   g_a: 
@@ -26,8 +26,8 @@ model:
     N4: 128
 
 ## Data
-data_path: "./data/datasets/full_128"
-min_points_train: 300
+data_path: "./data/datasets/jpeg_128"
+min_points_train: 500
 min_points_test: 0
 transforms:
   train:
@@ -43,18 +43,18 @@ q_map:
   lambda_A_max: 12800
   lambda_G_min: 0
   lambda_G_max: 200
-  mode: "quadratic"
+  mode: "exponential"
 
 ## Training
-device: "2"
-epochs: 300
+device: "1"
+epochs: 600
 batch_size: 8
 virtual_batches: false
 model_learning_rate: 0.0001
 bottleneck_learning_rate: 0.001
 optimizer: "Adam"
-scheduler_step_size: 150
-scheduler_gamma: 0.1
+scheduler_step_size: [300, 400, 500]
+scheduler_gamma: 0.5
 clip_grad_norm: 1.0
 
 ## Loss:

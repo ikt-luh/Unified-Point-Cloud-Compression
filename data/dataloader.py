@@ -108,6 +108,7 @@ class StaticDataset():
         current_directory = os.path.dirname(os.path.abspath((__file__)))
         raw_data_config = os.path.join(current_directory, "config", "raw_loading.yaml")
         raw_data_path = os.path.join(current_directory, "datasets", "raw")
+        print(raw_data_path)
         raw_loader = RawLoader(raw_data_path, raw_data_config)
 
         data = {}

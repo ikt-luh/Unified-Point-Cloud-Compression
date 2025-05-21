@@ -1,6 +1,7 @@
 import yaml
 import os
 import argparse
+import random
 import torch
 import torch.optim as optim
 import numpy as np
@@ -8,7 +9,6 @@ import open3d as o3d
 import pandas as pd
 import MinkowskiEngine as ME
 from tqdm import tqdm
-
 
 import utils
 from torch.utils.data import DataLoader
@@ -74,9 +74,16 @@ class Training():
         self.bottleneck_optimizer = optim.Adam(bottleneck_parameters,
                                                 lr=self.config["bottleneck_learning_rate"])
 
-        self.model_scheduler = optim.lr_scheduler.StepLR(self.model_optimizer, 
-                                                         step_size=self.config["scheduler_step_size"], 
-                                                         gamma=self.config["scheduler_gamma"])
+        if isinstance(self.config["scheduler_step_size"], list):
+            print("Multi Step LR")
+            self.model_scheduler = optim.lr_scheduler.MultiStepLR(self.model_optimizer, 
+                                                            milestones=self.config["scheduler_step_size"], 
+                                                            gamma=self.config["scheduler_gamma"])
+        else:
+            print("Step LR")
+            self.model_scheduler = optim.lr_scheduler.StepLR(self.model_optimizer, 
+                                                            step_size=self.config["scheduler_step_size"], 
+                                                            gamma=self.config["scheduler_gamma"])
         
         # Loss
         self.loss = Loss(self.config["loss"])
@@ -90,18 +97,22 @@ class Training():
         valset = StaticDataset(self.config["data_path"],
                                  split="val",
                                  transform=None,
-                                 partition=False)
+                                 partition=self.config["min_points_train"])
 
         self.train_loader = DataLoader(trainset,
                                        batch_size=self.config["batch_size"],                                       
                                        shuffle=True,
                                        num_workers=12,
-                                       pin_memory=False,
+                                       pin_memory=True,
                                        worker_init_fn=seed_worker,
                                        collate_fn=custom_collate_fn)
         self.val_loader = DataLoader(valset,
-                                     batch_size=1,                                       
-                                     shuffle=False)
+                                     batch_size=self.config["batch_size"],                                       
+                                     shuffle=True,
+                                     num_workers=12,
+                                     pin_memory=False,
+                                     worker_init_fn=seed_worker,
+                                     collate_fn=custom_collate_fn)
 
         self.q_func = Q_Func(self.config["q_map"])
 
@@ -160,10 +171,7 @@ class Training():
         for epoch in range(self.epoch, self.config["epochs"]):
             # Training
             self.train_epoch(epoch)
-
-            # Val for peaking current results
-            if ((epoch + 1)%10 == 0):
-                self.val_epoch(epoch)
+            self.val_epoch(epoch)
 
             self.model_scheduler.step()
             self.model.update()
@@ -242,6 +250,52 @@ class Training():
 
 
     def val_epoch(self, epoch):
+        """
+        One validation epoch, operating through compression on full dataset
+        """
+        self.model.eval()
+        self.model.update()
+
+        loss_avg = utils.AverageMeter()
+        aux_loss_avg = utils.AverageMeter()
+
+        pbar = tqdm(self.val_loader, bar_format=TQDM_BAR_FORMAT_VAL)
+        pbar.set_description("[{}: {:03d}/{:03d}]".format(self.config["experiment_name"], 
+                                                  int(epoch + 1), 
+                                                  int(self.config["epochs"])))
+        with torch.no_grad():
+            for i, data in enumerate(pbar):
+
+                coords, feats = ME.utils.collation.sparse_collate(data["points"], 
+                                                                data["colors"], 
+                                                                device=self.device)
+
+                # Quantize coordinates to remove duplicates
+                coords, feats = ME.utils.sparse_quantize(
+                    coordinates=coords,
+                    features=feats,
+                    quantization_size=1.0
+                )
+
+                # Input data
+                input = ME.SparseTensor(features=feats,
+                                        coordinates=coords,
+                                        device=self.device)
+            
+                q, Lambda = self.q_func(input)
+                output = self.model(input, q, Lambda)
+
+                # Backward for model
+                loss_value, loss_dict = self.loss(input, output)
+                loss_avg.update(loss_value.item())
+
+                # Logging
+                pbar_dict = {}
+                pbar_dict["Loss"] = "{:.2e}".format(loss_avg.avg)
+                pbar_dict["Aux_Loss"] = "{:.2e}".format(aux_loss_avg.avg)
+                pbar.set_postfix(pbar_dict)
+
+    def val_epoch_peak(self, epoch):
         """
         One validation epoch, operating through compression on full dataset
         """
@@ -329,7 +383,7 @@ class Training():
         checkpoint["model_scheduler"] = self.model_scheduler.state_dict()
         checkpoint["bottleneck_optimizer"] = self.bottleneck_optimizer.state_dict()
 
-        path = os.path.join(self.results_directory, "ckpts", "ckpt_{:03d}.pt".format(epoch))
+        path = os.path.join(self.results_directory, "ckpts", "ckpt.pt")
         torch.save(checkpoint, path)
 
     def load_checkpoint(self, path):

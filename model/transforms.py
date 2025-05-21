@@ -126,19 +126,24 @@ class SparseSynthesisTransform(torch.nn.Module):
         self.up_1 = nn.Sequential(
             ME.MinkowskiConvolution(in_channels=N4, out_channels=N3, kernel_size=5, stride=1, bias=True, dimension=3),
             MinkowskiGDN(N3, inverse=True),
-            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N3, out_channels=N2, kernel_size=5, stride=2, bias=True, dimension=3)
+            ME.MinkowskiConvolution(in_channels=N3, out_channels=N3, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N3, out_channels=N2, kernel_size=3, stride=2, bias=True, dimension=3)
         )
         self.up_2 = nn.Sequential(
             MinkowskiGDN(N2, inverse=True),
-            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N2, out_channels=N1, kernel_size=5, stride=2, bias=True, dimension=3)
+            ME.MinkowskiConvolution(in_channels=N2, out_channels=N2, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N2, out_channels=N1, kernel_size=3, stride=2, bias=True, dimension=3)
         )
         self.up_3 = nn.Sequential(
             MinkowskiGDN(N1, inverse=True),
-            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N1, out_channels=N1//4, kernel_size=5, stride=2, bias=True, dimension=3)
+            ME.MinkowskiConvolution(in_channels=N1, out_channels=N1, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiGenerativeConvolutionTranspose(in_channels=N1, out_channels=N1//4, kernel_size=3, stride=2, bias=True, dimension=3)
         )
 
         # Final Color Convolution
         self.color_conv = nn.Sequential(
+            ME.MinkowskiConvolution(in_channels=N1//4, out_channels=N1//4, kernel_size=3, stride=1, bias=True, dimension=3),
+            ME.MinkowskiReLU(inplace=False),
             ME.MinkowskiConvolution(in_channels=N1//4, out_channels=C_out, kernel_size=1, stride=1, bias=True, dimension=3),
         )
 

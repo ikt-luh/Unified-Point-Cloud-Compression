@@ -19,6 +19,11 @@ class Q_Func(object):
             self.b_A = config["lambda_A_min"]
             self.a_G = config["lambda_G_max"] - config["lambda_G_min"]
             self.b_G = config["lambda_G_min"]
+        elif self.mode == "linear":
+            self.a_A = config["lambda_A_max"] - config["lambda_A_min"]
+            self.b_A = config["lambda_A_min"]
+            self.a_G = config["lambda_G_max"] - config["lambda_G_min"]
+            self.b_G = config["lambda_G_min"]
 
 
     def __call__(self, geometry):
@@ -66,6 +71,9 @@ class Q_Func(object):
         elif self.mode == "quadratic":
             lambda_vals[:, 0] = lambda_vals[:, 0]**2 * self.a_G + self.b_G
             lambda_vals[:, 1] = lambda_vals[:, 1]**2 * self.a_A + self.b_A
+        elif self.mode == "linear":
+            lambda_vals[:, 0] = lambda_vals[:, 0] * self.a_G + self.b_G
+            lambda_vals[:, 1] = lambda_vals[:, 1] * self.a_A + self.b_A
         else:
             raise ValueError("Unknown mapping mode")
         return lambda_vals

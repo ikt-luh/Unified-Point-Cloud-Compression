@@ -1,5 +1,5 @@
 ## General
-experiment_name: "CVPR_inverse_scaling_shepard"
+experiment_name: "CVPR_inverse_nn"
 results_path : "./results"
 
 # Model
@@ -9,7 +9,7 @@ model:
     C_bottleneck: 128
     C_hyper_bottleneck: 192
     quantization_mode: "ste"
-    inverse_rescaling: True
+    inverse_rescaling: False
     quantization_offset: True
     entropy_bottleneck_vbr: False
   g_a: 
@@ -26,7 +26,7 @@ model:
     N4: 128
 
 ## Data
-data_path: "./data/datasets/full_128"
+data_path: "./data/datasets/jpeg_128"
 min_points_train: 300
 min_points_test: 0
 transforms:
@@ -46,7 +46,7 @@ q_map:
   mode: "quadratic"
 
 ## Training
-device: "1"
+device: "2"
 epochs: 300
 batch_size: 8
 virtual_batches: false
@@ -64,10 +64,8 @@ loss:
     alpha: 0.5
     gamma: 2.0
   ColorLoss:
-    type: "ShepardsLoss"
+    type: "ColorLoss"
     loss: "L2"
-    window_size: 9
-    p: 8
   bpp-y:
     type: "BPPLoss"
     key: "y"

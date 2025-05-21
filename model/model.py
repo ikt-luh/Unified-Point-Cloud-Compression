@@ -116,7 +116,15 @@ class UnifiedModel(CompressionModel):
         """
         # Optional Scaling
         if scaling_factor != 1.0:
-            pointcloud[:, :3] = torch.round(pointcloud[:, :3] / scaling_factor).int()
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(pointcloud[:, :3].cpu().numpy())
+            pcd.colors = o3d.utility.Vector3dVector(pointcloud[:, 3:6].cpu().numpy())
+
+            pcd_ds = pcd.voxel_down_sample(voxel_size=scaling_factor)
+
+            points = np.asarray(pcd_ds.points) // scaling_factor
+            colors = np.asarray(pcd_ds.colors)
+            pointcloud = torch.from_numpy(np.hstack((points, colors))).to(pointcloud.device).float()
 
         # Block Partitioning
         min_coords = torch.min(pointcloud[:, :3], dim=0)[0]
@@ -178,6 +186,7 @@ class UnifiedModel(CompressionModel):
         # Return componenets or write to bitstream on disk
         if path:
             self.save_bitstream(path=path, 
+                                scaling_factor=scaling_factor,
                                 blocks_coordinates=block_coordinates, 
                                 blocks_strings=bitstreams, 
                                 blocks_shapes=block_shapes, 
@@ -214,14 +223,15 @@ class UnifiedModel(CompressionModel):
 
         # Load data from bitstream if path is given
         if path:
-            coordinates, strings, shape, k, q_vals = self.load_bitstream(path)
+            scaling_factor, coordinates, strings, shape, k, q_vals = self.load_bitstream(path)
             for i, _ in enumerate(coordinates):
                 block_coords = coordinates[i].to(device) 
                 batch_vec = torch.zeros((block_coords.shape[0], 1), device=block_coords.device)
                 coordinates[i] = torch.cat([batch_vec, block_coords.contiguous()], dim=1)
                 q_vals[i] = q_vals[i].to(device) 
 
-        x_hat_list = []
+        features_list = []
+        coords_list = []
         for i, (block_strings, block_shape, block_coords, block_k) in enumerate(zip(strings, shape, coordinates, k)):
             # Compute latent coordinates
             latent_coordinates_2 = ME.SparseTensor(coordinates=block_coords.clone(), features=torch.ones((block_coords.shape[0], 1)), tensor_stride=8, device=block_coords.device)
@@ -235,14 +245,13 @@ class UnifiedModel(CompressionModel):
             # Synthesis Transform
             x_hat = self.g_s(y_hat, k=block_k)
 
-            x_hat_list.append(x_hat)
+            features_list.append(x_hat.F.to("cpu"))
+            coords_list.append(x_hat.C.to("cpu"))
     
-        # Concatenate results
-        features_list = [x_hat.F for x_hat in x_hat_list]
-        coords_list = [x_hat.C for x_hat in x_hat_list]
-
         features_concat = torch.cat(features_list, dim=0)
-        coords_concat = torch.cat(coords_list, dim=0)
+        coords_concat = torch.cat(coords_list, dim=0) * scaling_factor
+        if scaling_factor > 1.0:
+            coords_concat += torch.round(torch.tensor([0.0, 1.0, 1.0, 1.0]) * scaling_factor/2)
 
         # Round to int8 colors (in float format)
         features_processed = torch.clamp(torch.round(features_concat * 255), 0.0, 255.0) / 255
@@ -250,7 +259,7 @@ class UnifiedModel(CompressionModel):
         return x_hat
 
 
-    def save_bitstream(self, path, blocks_coordinates, blocks_strings, blocks_shapes, blocks_k, blocks_q):
+    def save_bitstream(self, path, scaling_factor, blocks_coordinates, blocks_strings, blocks_shapes, blocks_k, blocks_q):
         """
         Save multiple blocks to a bitstream.
 
@@ -273,6 +282,7 @@ class UnifiedModel(CompressionModel):
         # Write the number of blocks
         num_blocks = len(blocks_coordinates)
         stream.write(num_blocks, np.int32)
+        stream.write(scaling_factor, np.float64)
 
         # Save blocks
         for i in range(num_blocks):
@@ -340,6 +350,7 @@ class UnifiedModel(CompressionModel):
 
         # Read the number of blocks
         num_blocks = stream.read(np.int32)
+        scaling_factor = stream.read(np.float64)
 
         # Initialize lists to store the block-wise data
         blocks_coordinates = []
@@ -382,7 +393,7 @@ class UnifiedModel(CompressionModel):
             blocks_k.append(k)
             blocks_q.append(q_vals)
 
-        return blocks_coordinates, blocks_strings, blocks_shapes, blocks_k, blocks_q
+        return scaling_factor, blocks_coordinates, blocks_strings, blocks_shapes, blocks_k, blocks_q
 
 
     def gpcc_encode(self, points, directory):
