@@ -1,0 +1,69 @@
+settings:
+  groups: 
+    8iVFB: [longdress, soldier, loot, redandblack]
+    solid: [soldier, bouquet, stmichael, thaidancer]
+    dense: [facade, CITIUSP, house, boxer]
+    sparse: [EPFL, unicorn, shiva, Arco]
+  methods:
+    - Main
+    - G-PCC
+    - V-PCC
+    - IT-DL-PCC
+    - JPEG-Pleno
+    - DeepPCC
+    - YOGA
+plots:
+  main:
+    groups: 
+      8iVFB: [longdress, soldier, loot, redandblack]
+      solid: [soldier, bouquet, stmichael, thaidancer]
+      dense: [facade, CITIUSP, house, boxer]
+      sparse: [EPFL, unicorn, shiva, Arco]
+    methods:
+      - Main
+      - G-PCC
+      - V-PCC
+      - IT-DL-PCC
+      - JPEG-Pleno
+      - DeepPCC
+      - YOGA
+  ablation_shepard:
+    groups: 
+      8iVFB: [longdress, soldier, loot, redandblack]
+    methods:
+      Main:
+        label:
+        color:
+        markers:
+      Ablation_Shepard:
+        label:
+        color:
+        markers:
+  ablation_fixed:
+    groups: 
+      8iVFB: [longdress, soldier, loot, redandblack]
+    methods:
+      Main:
+        label:
+        color:
+        markers:
+      Ablation_Fixed:
+        label:
+        color:
+        markers:
+  ablation_qfunc:
+    groups: 
+      8iVFB: [longdress, soldier, loot, redandblack]
+    methods:
+      Main:
+        label:
+        color:
+        markers:
+      Ablation_qFunc_Linear:
+        label:
+        color:
+        markers:
+      Ablation_qFunc_Exponential:
+        label:
+        color:
+        markers:

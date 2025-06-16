@@ -233,6 +233,7 @@ class UnifiedModel(CompressionModel):
         features_list = []
         coords_list = []
         for i, (block_strings, block_shape, block_coords, block_k) in enumerate(zip(strings, shape, coordinates, k)):
+            torch.cuda.empty_cache()
             # Compute latent coordinates
             latent_coordinates_2 = ME.SparseTensor(coordinates=block_coords.clone(), features=torch.ones((block_coords.shape[0], 1)), tensor_stride=8, device=block_coords.device)
             latent_coordinates_2 = self.g_s.down_conv(latent_coordinates_2)

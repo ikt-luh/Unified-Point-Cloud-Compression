@@ -1,0 +1,18 @@
+main:
+  info:
+    label: "YOGA"
+    color: ""
+    markers: ""
+  rate-points:
+    longdress: 
+      attributeID:
+      geometryID:
+    soldier: 
+      attributeID:
+      geometryID:
+    loot:
+      attributeID:
+      geometryID:
+    redandblack:
+      attributeID:
+      geometryID:

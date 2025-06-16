@@ -88,8 +88,7 @@ def render_pointcloud(pc, path, point_size=1.0):
 
     # Path
     dir, _ = os.path.split(path)
-    if not os.path.exists(dir):
-        os.mkdir(dir)
+    os.makedirs(dir, exist_ok=True)
 
     vis = o3d.visualization.Visualizer()
     vis.create_window(visible=True)
@@ -474,7 +473,7 @@ def compress_model_ours(experiment, model, data, q_a, q_g, scaling_factor, block
 
 
 
-def compress_related(experiment, data, q_a, q_g, base_path):
+def compress_related(experiment, data, setting, base_path):
     """
     Compress a point cloud using V-PCC/G-PCC
     """
@@ -503,6 +502,9 @@ def compress_related(experiment, data, q_a, q_g, base_path):
     o3d.t.io.write_point_cloud(src_dir, source, write_ascii=True)
 
     if experiment == "G-PCC":
+        pQS = setting["pQS"]
+        QP = setting["QP"]
+        enablePlanar = setting["enable_planar"]
         # Compress the point cloud using G-PCC
         command = ['./dependencies/mpeg-pcc-tmc13/build/tmc3/tmc3',
                 '--mode=0',
@@ -510,26 +512,35 @@ def compress_related(experiment, data, q_a, q_g, base_path):
                 '--mergeDuplicatedPoints=1',
                 '--neighbourAvailBoundaryLog2=8',
                 '--intra_pred_max_node_size_log2=6',
-                '--positionQuantizationScale={}'.format(q_g),
+                '--positionQuantizationScale={}'.format(pQS),
                 '--maxNumQtBtBeforeOt=4',
                 '--minQtbtSizeLog2=0',
                 '--planarEnabled=1',
                 '--planarModeIdcmUse=0',
-                '--convertPlyColourspace=1',
 
-                '--transformType=0',
-                '--qp={}'.format(q_a),
-                '--qpChromaOffset=-2',
+                '--convertPlyColourspace=1',
+                '--transformType=2',
+                '--numberOfNearestNeighborsInPrediction=3',
+                '--levelOfDetailCount=12',
+                "--lodDecimator=0",
+                '--adaptivePredictionThreshold=64',
+                '--qp={}'.format(QP),
+                '--qpChromaOffset=0',
                 '--bitdepth=8',
                 '--attrOffset=0',
                 '--attrScale=1',
                 '--attribute=color',
+                '--planarEnabled={}'.format(enablePlanar),
 
                 '--uncompressedDataPath={}'.format(src_dir),
                 '--compressedStreamPath={}'.format(bin_dir)]
+        print(command)
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         out = result.stdout.decode()
+        err = result.stdout.decode()
+        print(err)
+        print(out)
         output_lines = out.split("\n")
         processing_time_line = None
         for line in output_lines:
@@ -569,19 +580,27 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         os.remove(bin_dir)
 
     elif experiment == "V-PCC": 
-        # TODO: Not complete, might want to rebuild at some point
-        occPrecision = 4 if q_g > 16 else 2
+        sequence = setting["sequence"]
+        seq_config = setting["seq_config"]
+        QA = setting["AttributeQP"]
+        QG = setting["GeometryQP"]
+        occPrecision = setting["occPrecision"]
         command = ['./dependencies/mpeg-pcc-tmc2/bin/PccAppEncoder',
                 '--configurationFolder=./dependencies/mpeg-pcc-tmc2/cfg/',
                 '--config=./dependencies/mpeg-pcc-tmc2/cfg/common/ctc-common.cfg',
-                '--config=./dependencies/mpeg-pcc-tmc2/cfg/condition/ctc-all-intra.cfg',
-                '--config=./dependencies/mpeg-pcc-tmc2/cfg/sequence/{}_vox10.cfg'.format(sequence), # Overwrite per sequence later
+                '--config=./dependencies/mpeg-pcc-tmc2/cfg/condition/vtm-all-intra.cfg',
+                #'--config=./dependencies/mpeg-pcc-tmc2/cfg/sequence/{}_vox10.cfg'.format(sequence), # Overwrite per sequence later
+                '--config={}'.format(seq_config), # Overwrite per sequence later
+                '--profileCodecGroupIdc=3',
+                '--nbThread=6',
+                '--keepIntermediateFiles=0',
                 '--frameCount=1',
-                '--geometryQP={}'.format(q_g),
-                '--attributeQP={}'.format(q_a),
+                '--geometryQP={}'.format(QG),
+                '--attributeQP={}'.format(QA),
                 '--occupancyPrecision={}'.format(occPrecision),
                 '--compressedStreamPath={}'.format(bin_dir),
                 '--uncompressedDataPath={}'.format(src_dir)]
+        print(command)
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         out = result.stdout.decode()
@@ -597,6 +616,7 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         # Decode
         command = ['./dependencies/mpeg-pcc-tmc2/bin/PccAppDecoder',
                 '--inverseColorSpaceConversionConfig=./dependencies/mpeg-pcc-tmc2/cfg/hdrconvert/yuv420torgb444.cfg',
+                '--nbThread=6',
                 '--reconstructedDataPath={}'.format(rec_dir),
                 '--compressedStreamPath={}'.format(bin_dir)]
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -616,23 +636,38 @@ def compress_related(experiment, data, q_a, q_g, base_path):
         rec_pc.colors=o3d.utility.Vector3dVector(colors)
 
     elif experiment=="IT-DL-PCC":
+        model = setting["model"]
+        scale = setting["scale"]
+        use_SR = setting["SR"]
+        print(setting)
+        blk_size = 64 if use_SR else 128
+
+        model_path = './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(model)
+        sr_model_path = './dependencies/IT-DL-PCC/models/Joint/SR/SF_{}/checkpoint_best_loss.pth.tar'.format(scale)
+
         command = ['python3', './dependencies/IT-DL-PCC/src/IT-DL-PCC.py',
             '--with_color',
             '--cuda', 
             'compress',
             '{}'.format(src_dir),
-            './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(q_g),
+            model_path,
             '{}'.format(path),
-            '--scale=1',
-            '--use_fast_topk',
-            '--blk_size=256',
+            '--blk_size={}'.format(blk_size),
         ]
+        if scale !=1:
+            command.append('--scale={}'.format(scale))
+        if use_SR: 
+            command.append("--use_sr")
+            command.append("--sr_model_dir")
+            command.append(sr_model_path)
 
+        print(command)
         t0 = time.time()
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         t_compress = time.time() - t0
 
         out = result.stdout.decode()
+        print(out)
 
         bin_dir = os.path.join(path, "points_enc/points_enc.gz")
         bpp = os.path.getsize(bin_dir) * 8 / N
@@ -642,10 +677,14 @@ def compress_related(experiment, data, q_a, q_g, base_path):
             '--cuda',
             'decompress',
             '{}'.format(bin_dir),
-            './dependencies/IT-DL-PCC/models/Joint/Codec/{}/checkpoint_best_loss.pth.tar'.format(q_g)
+            model_path,
         ]
+        if use_SR: 
+            command.append("--sr_model_dir")
+            command.append(sr_model_path)
 
         t0 = time.time()
+        print(command)
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         t_decompress = time.time() - t0
 

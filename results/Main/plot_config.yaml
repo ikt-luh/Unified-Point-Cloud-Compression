@@ -1,0 +1,120 @@
+main:
+  info:
+    label: "Ours"
+    color: ""
+    markers: ""
+  rate-points:
+    longdress: 
+      q_a: [0.2, 0.2, 0.2, 1.0]
+      q_g: [0.0, 0.4, 0.2, 1.0]
+      s: [2, 2, 1, 1]
+    soldier: 
+      q_a: [0.3, 0.5, 0.4, 1.0]
+      q_g: [0.0, 0.3, 0.2, 1.0]
+      s: [2, 2, 1, 1]
+    loot:
+      q_a: [0.2, 0.3, 0.4, 1.0]
+      q_g: [0.1, 0.0, 0.4, 1.0]
+      s: [2, 1, 1, 1]
+    redandblack:
+      q_a: [0.1, 0.2, 0.3, 1]
+      q_g: [0.2, 0.1, 0.2, 1]
+      s: [2, 1, 1, 1]
+    boxer :
+      q_a: []
+      q_g: []
+      s: []
+    thaidancer :
+      q_a: []
+      q_g: []
+      s: []
+    bouquet : 
+      q_a: []
+      q_g: []
+      s: []
+    stmichael: 
+      q_a: []
+      q_g: []
+      s: []
+    CITISUP :
+      q_a: []
+      q_g: []
+      s: []
+    EPFL :
+      q_a: []
+      q_g: []
+      s: []
+    Facade : 
+      q_a: []
+      q_g: []
+      s: []
+    House :
+      q_a: []
+      q_g: []
+      s: []
+    shiva : 
+      q_a: []
+      q_g: []
+      s: []
+    Unicorn:
+      q_a: []
+      q_g: []
+      s: []
+    Arco :
+      q_a: []
+      q_g: []
+      s: []
+ablation_shepard:
+  rate-points:
+    longdress: 
+      q_a: []
+      q_g: []
+      s: []
+    soldier: 
+      q_a: []
+      q_g: []
+      s: []
+    loot:
+      q_a: []
+      q_g: []
+      s: []
+    redandblack:
+      q_a: []
+      q_g: []
+      s: []
+ablation_fixed:
+  rate-points:
+    longdress: 
+      q_a: []
+      q_g: []
+      s: []
+    soldier: 
+      q_a: []
+      q_g: []
+      s: []
+    loot:
+      q_a: []
+      q_g: []
+      s: []
+    redandblack:
+      q_a: []
+      q_g: []
+      s: []
+ablation_qfunc:
+  rate-points:
+    longdress: 
+      q_a: []
+      q_g: []
+      s: []
+    soldier: 
+      q_a: []
+      q_g: []
+      s: []
+    loot:
+      q_a: []
+      q_g: []
+      s: []
+    redandblack:
+      q_a: []
+      q_g: []
+      s: []

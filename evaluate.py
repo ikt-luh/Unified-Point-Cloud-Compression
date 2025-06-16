@@ -32,17 +32,17 @@ ref_paths = {
      "longdress" : "./data/datasets/8iVFB/longdress_vox10_1300.ply",
      "soldier" : "./data/datasets/8iVFB/soldier_vox10_0690.ply",
      "redandblack" : "./data/datasets/8iVFB/redandblack_vox10_1550.ply",
-     "thaidancer" : "./data/datasets/jpeg_testset/Thaidancer_viewdep_vox12.ply",
-     "bouquet" : "./data/datasets/jpeg_testset/RWT130Bouquet.ply",
-     "stmichael" : "./data/datasets/jpeg_testset/RWT70StMichael.ply",
-     "boxer" : "./data/datasets/jpeg_testset/boxer_viewdep_vox12.ply",
-     "House" : "./data/datasets/jpeg_testset/House_without_roof_00057_vox12.ply",
-     "Facade" : "./data/datasets/jpeg_testset/Facade_00009_vox12.ply",
-     "Arco" : "./data/datasets/jpeg_testset/Arco_Valentino_Dense_vox12.ply",
-     "shiva" : "./data/datasets/jpeg_testset/Shiva_00035_vox12.ply",
-     "Unicorn" : "./data/datasets/jpeg_testset/ULB_Unicorn_vox13_n.ply",
-     "CITISUP" : "./data/datasets/jpeg_testset/CITIUSP_vox13_n.ply",
-     "EPFL" : "./data/datasets/jpeg_testset/EPFL_vox13_n.ply",
+     #"thaidancer" : "./data/datasets/jpeg_testset/Thaidancer_viewdep_vox12.ply",
+     #"bouquet" : "./data/datasets/jpeg_testset/RWT130Bouquet.ply",
+     #"stmichael" : "./data/datasets/jpeg_testset/RWT70StMichael.ply",
+     #"boxer" : "./data/datasets/jpeg_testset/boxer_viewdep_vox12.ply",
+     #"House" : "./data/datasets/jpeg_testset/House_without_roof_00057_vox12.ply",
+     #"Facade" : "./data/datasets/jpeg_testset/Facade_00009_vox12.ply",
+     #"Arco" : "./data/datasets/jpeg_testset/Arco_Valentino_Dense_vox12.ply",
+     #"shiva" : "./data/datasets/jpeg_testset/Shiva_00035_vox12.ply",
+     #"Unicorn" : "./data/datasets/jpeg_testset/ULB_Unicorn_vox13_n.ply",
+     #"CITISUP" : "./data/datasets/jpeg_testset/CITIUSP_vox13_n.ply",
+     #"EPFL" : "./data/datasets/jpeg_testset/EPFL_vox13_n.ply",
      }
 resolutions ={
      "longdress" : 1023, "soldier" : 1023, "loot" : 1023, "redandblack" : 1023, 
@@ -60,13 +60,11 @@ block_sizes ={
 
 device_id = 3
 experiments = [
-    #"G-PCC",
-    #"IT-DL-PCC",
-    #"CVPR_inverse_scaling_shepard"
-    #"CVPR_inverse_scaling_fixed_R1",
-    #"CVPR_inverse_scaling_fixed_R2",
-    #"CVPR_inverse_scaling_fixed_R3",
-    "Main",
+    "Ablation_fixed_R1",
+    "Ablation_fixed_R2",
+    "Ablation_fixed_R3",
+    "Ablation_fixed_R4",
+    #"Main",
     ]
 
 related_work = [
@@ -87,10 +85,10 @@ def run_testset(experiments):
 
         # Set model and QPs
         if experiment not in related_work:
-            q_as = np.arange(11) * 0.1
-            q_gs = np.arange(11) * 0.1
-            #q_as = [0.1, 1.0]
-            #q_gs = [0.1, 1.0]
+            #q_as = np.arange(11) * 0.1
+            #q_gs = np.arange(11) * 0.1
+            q_as = [1.0]
+            q_gs = [1.0]
 
             weight_path = os.path.join(base_path, experiment, "weights.pt")
             config_path = os.path.join(base_path, experiment, "config.yaml")

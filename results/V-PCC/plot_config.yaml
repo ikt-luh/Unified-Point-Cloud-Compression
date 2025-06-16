@@ -1,0 +1,36 @@
+main:
+  info:
+    label: "V-PCC"
+    color: ""
+    markers: ""
+  rate-points:
+    longdress: 
+      IDX: [1,2,3,4]
+    soldier: 
+      IDX: [1,2,3,4]
+    loot:
+      IDX: [1,2,3,4]
+    redandblack:
+      IDX: [1,2,3,4]
+    boxer :
+      IDX: [1,2,3,4]
+    thaidancer :
+      IDX: [1,2,3,4]
+    bouquet : 
+      IDX: [1,2,3,4]
+    stmichael: 
+      IDX: [1,2,3,4]
+    CITISUP :
+      IDX: [1,2,3,4]
+    EPFL :
+      IDX: [1,2,3,4]
+    Facade : 
+      IDX: [1,2,3,4]
+    House :
+      IDX: [1,2,3,4]
+    shiva : 
+      IDX: [1,2,3,4]
+    Unicorn:
+      IDX: [1,2,3,4]
+    Arco :
+      IDX: [1,2,3,4]

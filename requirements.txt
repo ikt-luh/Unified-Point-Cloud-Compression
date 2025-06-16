@@ -11,3 +11,6 @@ pandas==2.0.2
 requests==2.31.0
 bitstream==3.1b1
 plyfile==1.1
+absl-py==2.2.2
+scikit-learn==1.6.1
+pyntcloud==0.3.1

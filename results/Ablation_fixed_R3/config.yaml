@@ -1,0 +1,69 @@
+batch_size: 8
+bottleneck_learning_rate: 0.001
+clip_grad_norm: 1.0
+data_path: ./data/datasets/jpeg_128
+device: '1'
+epochs: 600
+experiment_name: Ablation_fixed_R3
+loss:
+  ColorLoss:
+    loss: L2
+    type: ColorLoss
+  Multiscale_FocalLoss:
+    alpha: 0.5
+    gamma: 2.0
+    type: Multiscale_FocalLoss
+  bpp-y:
+    key: y
+    type: BPPLoss
+    weight: 1.0
+  bpp-z:
+    key: z
+    type: BPPLoss
+    weight: 1.0
+min_points_test: 0
+min_points_train: 500
+model:
+  entropy_model:
+    C_bottleneck: 128
+    C_hyper_bottleneck: 192
+    adaptive_BN: false
+    entropy_bottleneck_vbr: false
+    inverse_rescaling: false
+    quantization_mode: ste
+    quantization_offset: false
+    type: MeanScaleHyperprior_map
+  g_a:
+    C_in: 4
+    N1: 128
+    N2: 128
+    N3: 128
+    N4: 128
+  g_s:
+    C_out: 3
+    N1: 128
+    N2: 128
+    N3: 128
+    N4: 128
+model_learning_rate: 0.0001
+optimizer: Adam
+q_map:
+  lambda_A_max: 2048
+  lambda_A_min: 2048
+  lambda_G_max: 32
+  lambda_G_min: 32
+  mode: quadratic
+results_path: ./results
+scheduler_gamma: 0.5
+scheduler_step_size:
+- 300
+- 400
+- 500
+transforms:
+  train:
+    1_ColorJitter:
+      key: ColorJitter
+    2_Rotate:
+      block_size: 128
+      key: RandomRotate
+virtual_batches: false

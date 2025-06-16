@@ -1,0 +1,14 @@
+main:
+  info:
+    label: "DeepPCC"
+    color: ""
+    markers: ""
+  rate-points:
+    longdress: 
+      IDX: [1,2,3,5]
+    soldier: 
+      IDX: [1,2,3,5]
+    loot:
+      IDX: [1,2,3,5]
+    redandblack:
+      IDX: [1,2,3,5]

@@ -89,6 +89,20 @@ mkdir build && cd build
 cmake ..
 make
 ```
+
+# V-PCC
+You will have to build with VTM Lib video codec (Hacky Solution: Set USE_VTMLIB_VIDEO_CODEC to true in CMakeLists.txt before building)
+```
+git clone https://github.com/MPEGGroup/mpeg-pcc-tmc2.git --branch release-v24.0
+cd mpeg-pcc-tmc2 && ./build.sh
+```
+
+# IT-DL-PCC
+```
+git clone https://github.com/aguarda/IT-DL-PCC.git
+```
+Download the weights from https://github.com/aguarda/IT-DL-PCC.git and place the unzipped repository in ./dependencies/IT-DL-PCC
+
 ### Metrics
 If you have access to the mpeg-pcc-dmetric repositry, install and compile it into the dependencies folder.
 The results in the paper where computed using aformentioned repository.
