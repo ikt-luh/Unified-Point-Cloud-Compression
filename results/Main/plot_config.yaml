@@ -1,120 +1,132 @@
-main:
+main_8i:
   info:
     label: "Ours"
-    color: ""
-    markers: ""
+    linestyle: "-"
+    color: "blue"
+    marker: "."
   rate-points:
     longdress: 
-      q_a: [0.2, 0.2, 0.2, 1.0]
-      q_g: [0.0, 0.4, 0.2, 1.0]
-      s: [2, 2, 1, 1]
+      q_a: [0.3, 0.3, 0.3, 1.0]
+      q_g: [0.3, 0.2, 0.3, 1.0]
+      scale_factor: [4, 2, 1, 1]
     soldier: 
       q_a: [0.3, 0.5, 0.4, 1.0]
       q_g: [0.0, 0.3, 0.2, 1.0]
-      s: [2, 2, 1, 1]
+      scale_factor: [2, 2, 1, 1]
     loot:
       q_a: [0.2, 0.3, 0.4, 1.0]
       q_g: [0.1, 0.0, 0.4, 1.0]
-      s: [2, 1, 1, 1]
+      scale_factor: [2, 1, 1, 1]
     redandblack:
       q_a: [0.1, 0.2, 0.3, 1]
       q_g: [0.2, 0.1, 0.2, 1]
-      s: [2, 1, 1, 1]
+      scale_factor: [2, 1, 1, 1]
+main_jpeg:
+  info:
+    label: "Ours"
+    linestyle: "-"
+    color: "blue"
+    marker: "."
+  rate-points:
+    soldier: 
+      q_a: [0.3, 0.5, 0.4, 1.0]
+      q_g: [0.0, 0.3, 0.2, 1.0]
+      scale_factor: [2, 2, 1, 1]
     boxer :
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.4, 0.5, 0.9, 1.0]
+      q_g: [0.1, 0.0, 0.4, 1.0]
+      scale_factor: [4, 2, 2, 2]
     thaidancer :
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.2, 0.2, 1.0, 0.9]
+      q_g: [0.2, 0.2, 0.9, 0.5]
+      scale_factor: [4, 2, 2, 1]
     bouquet : 
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.5, 0.2, 0.5, 1.0]
+      q_g: [0.5, 0.1, 0.4, 1.0]
+      scale_factor: [4, 1, 1, 1]
     stmichael: 
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.3, 0.7, 0.3, 1.0 ]
+      q_g: [0.4, 0.3, 0.4, 1.0]
+      scale_factor: [4, 2, 1, 1]
     CITISUP :
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.1, 0.2, 0.2, 0.7]
+      q_g: [0.1, 0.2, 0.3, 0.7]
+      scale_factor: [4, 4, 2, 2]
     EPFL :
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.1, 0.2, 0.3, 1.0]
+      q_g: [0.1, 0.2, 0.3, 1.0]
+      scale_factor: [4, 4, 2, 2]
     Facade : 
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.2, 0.3, 0.9, 0.6]
+      q_g: [0.2, 0.3, 1.0, 0.6]
+      scale_factor: [4, 2, 2, 1]
     House :
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.4, 0.4, 0.4, 0.8]
+      q_g: [0.0, 0.1, 0.2, 0.3]
+      scale_factor: [4, 2, 1, 1]
     shiva : 
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.2, 0.3, 0.7, 1.0]
+      q_g: [0.1, 0.2, 0.8, 1.0]
+      scale_factor: [4, 2, 2, 2]
     Unicorn:
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.1, 0.3, 0.5, 1.0]
+      q_g: [0.1, 0.2, 0.4, 1.0]
+      scale_factor: [4, 4, 4, 4]
     Arco :
-      q_a: []
-      q_g: []
-      s: []
+      q_a: [0.1, 0.2, 0.1, 0.8]
+      q_g: [0.1, 0.2, 0.3, 0.5]
+      scale_factor: [4, 4, 2, 2]
 ablation_shepard:
   rate-points:
     longdress: 
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     soldier: 
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     loot:
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     redandblack:
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
 ablation_fixed:
   rate-points:
     longdress: 
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     soldier: 
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     loot:
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     redandblack:
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
 ablation_qfunc:
   rate-points:
     longdress: 
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     soldier: 
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     loot:
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []
     redandblack:
       q_a: []
       q_g: []
-      s: []
+      scale_factor: []

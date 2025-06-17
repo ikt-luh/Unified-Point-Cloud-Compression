@@ -1,0 +1,48 @@
+main_8i:
+  info:
+    label: "IT-DL-PCC"
+    linestyle: "-"
+    color: "brown"
+    marker: "."
+  rate-points:
+    longdress: 
+      IDX: [4,17,0,20]
+    soldier: 
+      IDX: [19,2,0,25]
+    loot:
+      IDX: [3,1,0,20]
+    redandblack:
+      IDX: [11,2,3,25]
+  
+
+main_jpeg:
+  info:
+    label: "IT-DL-PCC"
+    linestyle: "-"
+    color: "brown"
+    marker: "."
+  rate-points:
+    soldier: 
+      IDX: [19,2,0,25]
+    boxer :
+      IDX: [13,23,20,27]
+    thaidancer :
+      IDX: [13,11,5,20]
+    bouquet : 
+      IDX: [3,17,5,15]
+    stmichael: 
+      IDX: [13,2,0,25]
+    CITISUP :
+      IDX: [14,19,1,20]
+    EPFL :
+      IDX: [13,8,23,25]
+    Facade : 
+      IDX: [8,18,1,20]
+    House :
+      IDX: [13,3,17,26]
+    shiva : 
+      IDX: [13,3,25,21]
+    Unicorn:
+      IDX: [0,20,23,28]
+    Arco :
+      IDX: [13,5,1,21]

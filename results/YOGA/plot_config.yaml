@@ -1,18 +1,19 @@
-main:
+main_8i:
   info:
     label: "YOGA"
-    color: ""
-    markers: ""
+    linestyle: "-."
+    color: "black"
+    marker: "."
   rate-points:
     longdress: 
-      attributeID:
-      geometryID:
+      q_a: [1, 5, 14, 20]
+      q_g: [1, 5, 9, 20]
     soldier: 
-      attributeID:
-      geometryID:
+      q_a: [5, 13, 17, 20]
+      q_g: [1, 4, 8, 20]
     loot:
-      attributeID:
-      geometryID:
+      q_a: [6, 16, 17, 20]
+      q_g: [1, 7, 14, 20]
     redandblack:
-      attributeID:
-      geometryID:
+      q_a: [3, 14, 19, 20]
+      q_g: [2, 3, 8, 20]

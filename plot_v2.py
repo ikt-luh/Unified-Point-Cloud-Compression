@@ -35,6 +35,20 @@ def load_dataframe(method):
     df = pd.read_csv(path)
     return df
 
+def filter_df_by_config(df, rate_config, pointcloud):
+    rate_config_df = pd.DataFrame(rate_config)
+
+    filtered_df = df[df["sequence"] == pointcloud]
+
+    # Round float columns in both dataframes for easier search (only key columns)
+    float_precision = 4
+    float_cols = [col for col in rate_config.keys() if df[col].dtype.kind == 'f']
+    filtered_df[float_cols] = filtered_df[float_cols].round(float_precision)
+    rate_config_df[float_cols] = rate_config_df[float_cols].round(float_precision)
+
+    result = filtered_df.merge(rate_config_df, how="inner", on=list(rate_config.keys()))
+    return result
+
 def filter_config_points(data, config):
     tolerance = 1e-5
 
@@ -69,12 +83,11 @@ def plot_experiments():
         rate_config_path = os.path.join("results", method, "plot_config.yaml")
         rate_config = load_yaml(rate_config_path)
         rate_configs[method] = rate_config 
-        break #DEBUGGING
 
     # Plot each study
     plot_configs = plot_config["plots"]
     for key in plot_configs.keys():
-        plot_rd_figs(plot_configs[key], dataframes)
+        plot_rd_figs(key, plot_configs, rate_configs, dataframes)
 
 
     # TODO
@@ -89,13 +102,14 @@ def plot_experiments():
 
 
     
-def plot_rd_figs(plot_config, dataframes):
+def plot_rd_figs(key, plot_config, method_configs, dataframes):
     """
     All figures as used in the publication
     """
-    print(plot_config.items())
+    plot_config = plot_config[key]
     groups = plot_config["groups"]
     methods = plot_config["methods"]
+
     for group in groups:
         pointclouds = groups[group]
         for pointcloud in pointclouds:
@@ -103,23 +117,29 @@ def plot_rd_figs(plot_config, dataframes):
 
             # Plot all metrics
             for metric in metrics:
-                # Set up plot
-
                 # Prepare figure
                 fig = plt.figure(figsize=(2.5, 2))
                 ax = fig.add_subplot(111)
 
                 # Plot all methods:
                 for method in methods:
-                    rate_config = None # TODO
+                    # Load the rate config for this eval
+                    method_config = method_configs[method][key]
+                    if pointcloud not in method_config["rate-points"].keys():
+                        continue
+                    rate_config = method_config["rate-points"][pointcloud]
+                    plot_config = method_config["info"]
 
+                    # Filter the dataframe by the specified rate points
                     filtered_df = filter_df_by_config(dataframes[method], rate_config, pointcloud)
-                    if filtered_df == None:
-                        continue # If no rate points given, jump over
 
                     # Get values
                     bpp = filtered_df["bpp"]
-                    y = filtered_df["metric"]
+                    print(method)
+                    print(bpp)
+                    y = filtered_df[metric]
+                    if metric == "pcqm":
+                        y = 1 - y # PCQM is reported in 1-PCQM
                     
                     # Fit Bjontegaard model and get plot data
                     bjonte_model = Bjontegaard_Model(bpp, y)
@@ -127,19 +147,23 @@ def plot_rd_figs(plot_config, dataframes):
 
                     # Plot and scatter curves
                     ax.plot(x_dat, y_dat, 
-                            label=runs[method]["label"][folder],
-                            linestyle=runs[method]["linestyles"],
-                            color=runs[method]["colors"])
+                            label=plot_config["label"],
+                            linestyle=plot_config["linestyle"],
+                            linewidth=0.8,
+                            alpha=0.8,
+                            color=plot_config["color"])
                     ax.scatter(x_scat, y_scat, 
-                            marker=runs[method]["markers"],
-                            color=runs[method]["colors"])
+                            marker=plot_config["marker"],
+                            s=5,
+                            color=plot_config["color"])
                     
                     # Plot labeling
                     ax.set_xlabel(r"bpp")
                     ax.set_ylabel(metric_labels[metric])
                     ax.tick_params(axis='both', which='major')
                     if metric == "pcqm":
-                        ax.yaxis.set_major_locator(ticker.MultipleLocator(0.002))
+                        ax.yaxis.set_major_locator(ticker.MultipleLocator(0.005))
+                        ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.001))
                         ax.yaxis.set_label_coords(-0.2, 0.5)
                     else:
                         ax.yaxis.set_label_coords(-0.12, 0.5)
@@ -151,7 +175,12 @@ def plot_rd_figs(plot_config, dataframes):
                 ax.grid(visible=True)
 
                 # Save plot
-                path = os.path.join(plots, folder, "rd-config_{}_{}.pdf".format(metric, key))
+                base_path = os.path.join(plots, key)
+                if not os.path.exists(base_path):
+                    os.makedirs(base_path)
+
+                path = os.path.join(base_path, "rd-config_{}_{}.pdf".format(metric, pointcloud))
+
                 fig.subplots_adjust(bottom=style.bottom, top=style.top, left=style.left, right=style.right)
                 fig.savefig(path)
 

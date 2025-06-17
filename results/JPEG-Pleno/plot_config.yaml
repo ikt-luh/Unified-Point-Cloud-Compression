@@ -1,23 +1,8 @@
-main_8i:
-  info:
-    label: "V-PCC"
-    linestyle: "-"
-    color: "green"
-    marker: "."
-  rate-points:
-    longdress: 
-      IDX: [1,2,3,4]
-    soldier: 
-      IDX: [1,2,3,4]
-    loot:
-      IDX: [1,2,3,4]
-    redandblack:
-      IDX: [1,2,3,4]
 main_jpeg:
   info:
-    label: "V-PCC"
-    linestyle: "-"
-    color: "green"
+    label: "JPEG Pleno PCC"
+    linestyle: "dotted"
+    color: "orange"
     marker: "."
   rate-points:
     soldier: 

@@ -1,14 +1,15 @@
-main:
+main_8i:
   info:
     label: "DeepPCC"
-    color: ""
-    markers: ""
+    linestyle: "-."
+    color: "green"
+    marker: "."
   rate-points:
     longdress: 
-      IDX: [1,2,3,5]
+      ID: [1,2,3,4]
     soldier: 
-      IDX: [1,2,3,5]
+      ID: [1,2,3,4]
     loot:
-      IDX: [1,2,3,5]
+      ID: [1,2,3,4]
     redandblack:
-      IDX: [1,2,3,5]
+      ID: [1,2,3,4]

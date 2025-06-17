@@ -2,8 +2,8 @@ settings:
   groups: 
     8iVFB: [longdress, soldier, loot, redandblack]
     solid: [soldier, bouquet, stmichael, thaidancer]
-    dense: [facade, CITIUSP, house, boxer]
-    sparse: [EPFL, unicorn, shiva, Arco]
+    dense: [Facade, CITISUP, House, boxer]
+    sparse: [EPFL, Unicorn, shiva, Arco]
   methods:
     - Main
     - G-PCC
@@ -13,20 +13,27 @@ settings:
     - DeepPCC
     - YOGA
 plots:
-  main:
+  main_8i:
     groups: 
       8iVFB: [longdress, soldier, loot, redandblack]
+    methods:
+      - Main
+      - G-PCC
+      - V-PCC
+      - IT-DL-PCC
+      - DeepPCC
+      - YOGA
+  main_jpeg:
+    groups: 
       solid: [soldier, bouquet, stmichael, thaidancer]
-      dense: [facade, CITIUSP, house, boxer]
-      sparse: [EPFL, unicorn, shiva, Arco]
+      dense: [Facade, CITISUP, House, boxer]
+      sparse: [EPFL, Unicorn, shiva, Arco]
     methods:
       - Main
       - G-PCC
       - V-PCC
       - IT-DL-PCC
       - JPEG-Pleno
-      - DeepPCC
-      - YOGA
   ablation_shepard:
     groups: 
       8iVFB: [longdress, soldier, loot, redandblack]
