@@ -94,6 +94,7 @@ class Training():
                                  split="train",
                                  transform=train_transform,
                                  min_points=self.config["min_points_train"])
+        print("Training samples: {}".format(len(trainset)))
         valset = StaticDataset(self.config["data_path"],
                                  split="val",
                                  transform=None,

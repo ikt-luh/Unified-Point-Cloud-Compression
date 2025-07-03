@@ -1,3 +1,4 @@
+# This defines the setup for plots
 settings:
   groups: 
     8iVFB: [longdress, soldier, loot, redandblack]
@@ -12,6 +13,13 @@ settings:
     - JPEG-Pleno
     - DeepPCC
     - YOGA
+    - Ablation_Shepard
+    - Ablation_fixed
+    - Ablation_lambdaFunc_linear
+    - Ablation_lambdaFunc_exponential
+    - Ablation_Inverse_nn
+
+# This defines all the plots
 plots:
   main_8i:
     groups: 
@@ -23,6 +31,7 @@ plots:
       - IT-DL-PCC
       - DeepPCC
       - YOGA
+
   main_jpeg:
     groups: 
       solid: [soldier, bouquet, stmichael, thaidancer]
@@ -34,43 +43,32 @@ plots:
       - V-PCC
       - IT-DL-PCC
       - JPEG-Pleno
-  ablation_shepard:
+
+  Ablation_Shepard:
     groups: 
       8iVFB: [longdress, soldier, loot, redandblack]
     methods:
-      Main:
-        label:
-        color:
-        markers:
-      Ablation_Shepard:
-        label:
-        color:
-        markers:
+      - Main
+      - Ablation_Shepard
+
   ablation_fixed:
     groups: 
       8iVFB: [longdress, soldier, loot, redandblack]
     methods:
-      Main:
-        label:
-        color:
-        markers:
-      Ablation_Fixed:
-        label:
-        color:
-        markers:
-  ablation_qfunc:
+      - Main
+      - Ablation_fixed
+
+  ablation_lambdaFunc:
     groups: 
       8iVFB: [longdress, soldier, loot, redandblack]
     methods:
-      Main:
-        label:
-        color:
-        markers:
-      Ablation_qFunc_Linear:
-        label:
-        color:
-        markers:
-      Ablation_qFunc_Exponential:
-        label:
-        color:
-        markers:
+      - Main
+      - Ablation_lambdaFunc_linear
+      - Ablation_lambdaFunc_exponential
+
+  ablation_inverseScaling:
+    groups: 
+      8iVFB: [longdress, soldier, loot, redandblack]
+    methods:
+      - Main
+      - Ablation_Inverse_nn

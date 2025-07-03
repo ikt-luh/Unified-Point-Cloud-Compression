@@ -11,6 +11,8 @@ class Bjontegaard_Delta:
         # Get bounds for integration
         rL = np.max([np.min(log_bitrates1), np.min(log_bitrates2)])
         rH = np.min([np.max(log_bitrates1), np.max(log_bitrates2)])
+        if rH <= rL:
+            return np.nan 
 
         # Integrals of the polynomial in log space
         P1 = np.poly1d(np.polyint(model1.parameters_PSNR))
@@ -26,6 +28,9 @@ class Bjontegaard_Delta:
         # Get bounds for integration
         DL = np.max([np.min(D1), np.min(D2)])
         DH = np.min([np.max(D1), np.max(D2)])
+
+        if DH <= DL:
+            return np.nan 
 
         # Integrals of the polynomial
         P1 = np.poly1d(np.polyint(model1.parameters_Rate))
@@ -49,8 +54,8 @@ class Bjontegaard_Model:
 
     def __update_model(self):
         logR = np.log10(self.bitrates) 
-        self.parameters_PSNR = np.polyfit(logR, self.psnr_values, 3)
-        self.parameters_Rate = np.polyfit(self.psnr_values, logR, 3)
+        self.parameters_PSNR = np.polyfit(logR, self.psnr_values, 3, rcond=1e-8)
+        self.parameters_Rate = np.polyfit(self.psnr_values, logR, 3, rcond=1e-8)
 
     def evaluate(self, R):
         logR = np.log10(R)
@@ -59,10 +64,9 @@ class Bjontegaard_Model:
         return value
 
     def evaluate_rate(self, R):
-        # This seems not correct
         p = np.poly1d(self.parameters_Rate)
         value = p(R)
-        #value = 10**value
+        value = 10**value
         return value
 
     def plot(self, ax):
@@ -81,17 +85,20 @@ class Bjontegaard_Model:
 
 if __name__ == "__main__":
     # Test of the BD model
-    bitrates1 = [22.35, 12.93, 8.27, 4.53]
-    bitrates2 = [24.35, 13.93, 9.27, 6.53]
-    d1 = [71.17, 69.54, 67.62, 65.77]
+    bitrates1 = [0.01, 0.2, 0.6, 1.52]
+    bitrates2 = [0.0270371, 0.151195, 0.615206, 1.64363]
+    d1 = [0.02, 0.003, 0.0015, 0.001]# 0.0003]
+    d2 = [0.00946959, 0.00181347, 0.0012, 0.001]#0.000378549, 0.000165418]
     metric1 = Bjontegaard_Model(bitrates1, d1)
     metric2 = Bjontegaard_Model(bitrates2, d1)
     fig, ax = plt.subplots()
     metric1.plot(ax)
     metric2.plot(ax)
     BD_Delta = Bjontegaard_Delta()
-    BD_Delta.compute_BD_PSNR(metric1, metric2)
-    BD_Delta.compute_BD_Rate(metric1, metric2)
-    BD_Delta.compute_BD_PSNR(metric2, metric1)
-    BD_Delta.compute_BD_Rate(metric2, metric1)
+    bd_psnr = BD_Delta.compute_BD_PSNR(metric1, metric2)
+    bd_rate = BD_Delta.compute_BD_Rate(metric1, metric2)
+    print(bd_psnr, bd_rate)
+    bd_psnr = BD_Delta.compute_BD_PSNR(metric2, metric1)
+    bd_rate = BD_Delta.compute_BD_Rate(metric2, metric1)
+    print(bd_psnr, bd_rate)
     plt.show()

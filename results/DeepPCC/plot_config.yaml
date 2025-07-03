@@ -2,7 +2,7 @@ main_8i:
   info:
     label: "DeepPCC"
     linestyle: "-."
-    color: "green"
+    color: "#03b5fc"
     marker: "."
   rate-points:
     longdress: 

@@ -1,0 +1,11 @@
+metric,pointCloud,method,BD-PSNR,BD-Rate
+pcqm,8iVFB,Ablation_lambdaFunc_linear,-0.00022372831433452794,18.69178372383411
+pcqm,8iVFB,Ablation_lambdaFunc_exponential,0.0036695470898233163,-56.80750348706615
+sym_y_psnr,8iVFB,Ablation_lambdaFunc_linear,-0.493902853139403,12.949099274793108
+sym_y_psnr,8iVFB,Ablation_lambdaFunc_exponential,1.9693302194409368,-33.13973081197072
+sym_p2p_psnr,8iVFB,Ablation_lambdaFunc_linear,-0.20490955608939426,3.4949973068195472
+sym_p2p_psnr,8iVFB,Ablation_lambdaFunc_exponential,-2.690942766124813,159.56919275464796
+sym_d2_psnr,8iVFB,Ablation_lambdaFunc_linear,-0.233164565719138,2.669130587977575
+sym_d2_psnr,8iVFB,Ablation_lambdaFunc_exponential,-3.56370402779143,161.99716570078982
+sym_yuv_psnr,8iVFB,Ablation_lambdaFunc_linear,-0.3684233262024264,9.084781285867717
+sym_yuv_psnr,8iVFB,Ablation_lambdaFunc_exponential,2.0532414935521452,-38.266016547812306

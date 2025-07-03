@@ -1,0 +1,23 @@
+ablation_lambdaFunc:
+  info:
+    label: "Exponential"
+    linestyle: "-"
+    color: "red"
+    marker: "."
+  rate-points:
+    longdress: 
+      q_a: [0.1, 0.2, 0.4, 1.0]
+      q_g: [0.1, 0.2, 0.4, 1.0]
+      scale_factor: [1, 1, 1, 1]
+    soldier: 
+      q_a: [0.1, 0.2, 0.4, 1.0]
+      q_g: [0.1, 0.2, 0.4, 1.0]
+      scale_factor: [1, 1, 1, 1]
+    loot:
+      q_a: [0.1, 0.2, 0.4, 1.0]
+      q_g: [0.1, 0.2, 0.4, 1.0]
+      scale_factor: [1, 1, 1, 1]
+    redandblack:
+      q_a: [0.1, 0.2, 0.4, 1.0]
+      q_g: [0.1, 0.2, 0.4, 1.0]
+      scale_factor: [1, 1, 1, 1]

@@ -1,8 +1,8 @@
 main_8i:
   info:
     label: "G-PCC"
-    linestyle: "-."
-    color: "red"
+    linestyle: ":"
+    color: "#787878"
     marker: "."
   rate-points:
     longdress: 
@@ -16,8 +16,8 @@ main_8i:
 main_jpeg:
   info:
     label: "G-PCC"
-    linestyle: "-."
-    color: "red"
+    linestyle: ":"
+    color: "#787878"
     marker: "."
   rate-points:
     soldier: 

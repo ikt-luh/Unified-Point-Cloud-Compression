@@ -19,6 +19,7 @@ path = "./results"
 plots = "./plot/figures"
 experiment_config = "./plot/configs/rd_evals.yaml"
 metrics = ["pcqm", "sym_y_psnr", "sym_p2p_psnr", "sym_d2_psnr", "sym_yuv_psnr"]
+plot_areas = ["Main", "Ablation_Inverse_nn"]
 
 
 def load_yaml(filepath):
@@ -43,8 +44,8 @@ def filter_df_by_config(df, rate_config, pointcloud):
     # Round float columns in both dataframes for easier search (only key columns)
     float_precision = 4
     float_cols = [col for col in rate_config.keys() if df[col].dtype.kind == 'f']
-    filtered_df[float_cols] = filtered_df[float_cols].round(float_precision)
-    rate_config_df[float_cols] = rate_config_df[float_cols].round(float_precision)
+    filtered_df.loc[:, float_cols] = filtered_df[float_cols].round(float_precision)
+    rate_config_df.loc[:, float_cols] = rate_config_df[float_cols].round(float_precision)
 
     result = filtered_df.merge(rate_config_df, how="inner", on=list(rate_config.keys()))
     return result
@@ -87,36 +88,35 @@ def plot_experiments():
     # Plot each study
     plot_configs = plot_config["plots"]
     for key in plot_configs.keys():
-        plot_rd_figs(key, plot_configs, rate_configs, dataframes)
+        bd_models = plot_rd_figs(key, plot_configs, rate_configs, dataframes)
+        compute_bd_deltas(bd_models, reference="Main", file_key=key)
+
+        bd_models_avg = plot_rd_figs_avg(key, plot_configs, rate_configs, dataframes)
+        compute_bd_deltas(bd_models_avg, reference="Main", file_key="{}_{}".format(key, "avg"))
 
 
-    # TODO
-    #compute_bd_deltas(data, sota_comparison, "CVPR_inverse_scaling", "sota_comparison")
-    
-    ## Timing
-    ## Plot per run results
-    #pareto_data = {}
-    #for key, dataframe in data.items():
-    #    pareto_df = plot_per_run_results(dataframe, key)
-    #    pareto_data[key] = pareto_df
+    for key in plot_areas:
+        plot_area_figs(dataframes[key], key, "soldier")
 
 
     
-def plot_rd_figs(key, plot_config, method_configs, dataframes):
+def plot_rd_figs(key, plot_configs, method_configs, dataframes):
     """
     All figures as used in the publication
     """
-    plot_config = plot_config[key]
+    plot_config = plot_configs[key]
     groups = plot_config["groups"]
     methods = plot_config["methods"]
 
-    for group in groups:
-        pointclouds = groups[group]
-        for pointcloud in pointclouds:
-            print(pointcloud)
+    bd_models = {}
+    times = []
+    for metric in metrics:
+        bd_models[metric] = {}
+        for group in groups:
+            pointclouds = groups[group]
 
-            # Plot all metrics
-            for metric in metrics:
+            for pointcloud in pointclouds:
+                bd_models[metric][pointcloud] = {}
                 # Prepare figure
                 fig = plt.figure(figsize=(2.5, 2))
                 ax = fig.add_subplot(111)
@@ -128,50 +128,64 @@ def plot_rd_figs(key, plot_config, method_configs, dataframes):
                     if pointcloud not in method_config["rate-points"].keys():
                         continue
                     rate_config = method_config["rate-points"][pointcloud]
-                    plot_config = method_config["info"]
+                    plot_style = method_config["info"]
 
                     # Filter the dataframe by the specified rate points
                     filtered_df = filter_df_by_config(dataframes[method], rate_config, pointcloud)
 
                     # Get values
                     bpp = filtered_df["bpp"]
-                    print(method)
-                    print(bpp)
                     y = filtered_df[metric]
                     if metric == "pcqm":
                         y = 1 - y # PCQM is reported in 1-PCQM
+                        
+                        # Average timings 
+                        if "t_compress" in filtered_df.columns:
+                            t_comp = np.mean(filtered_df["t_compress"])
+                            t_decomp = np.mean(filtered_df["t_decompress"])
+                            times.append({"method": method,
+                                        "pointcloud": pointcloud,
+                                        "t_comp": t_comp,
+                                        "t_decomp": t_decomp})
                     
+                    print("{} {} {}".format(method, pointcloud, len(bpp)))
+
                     # Fit Bjontegaard model and get plot data
                     bjonte_model = Bjontegaard_Model(bpp, y)
+                    bd_models[metric][pointcloud][method] = bjonte_model
                     x_scat, y_scat, x_dat, y_dat = bjonte_model.get_plot_data()
 
                     # Plot and scatter curves
                     ax.plot(x_dat, y_dat, 
-                            label=plot_config["label"],
-                            linestyle=plot_config["linestyle"],
+                            label=plot_style["label"],
+                            linestyle=plot_style["linestyle"],
                             linewidth=0.8,
                             alpha=0.8,
-                            color=plot_config["color"])
+                            color=plot_style["color"])
                     ax.scatter(x_scat, y_scat, 
-                            marker=plot_config["marker"],
+                            marker=plot_style["marker"],
                             s=5,
-                            color=plot_config["color"])
+                            color=plot_style["color"])
                     
-                    # Plot labeling
-                    ax.set_xlabel(r"bpp")
-                    ax.set_ylabel(metric_labels[metric])
-                    ax.tick_params(axis='both', which='major')
-                    if metric == "pcqm":
-                        ax.yaxis.set_major_locator(ticker.MultipleLocator(0.005))
-                        ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.001))
-                        ax.yaxis.set_label_coords(-0.2, 0.5)
-                    else:
-                        ax.yaxis.set_label_coords(-0.12, 0.5)
-                    ax.xaxis.set_label_coords(0.5, -0.12)
+                # Plot labeling
+                ax.set_ylabel(metric_labels[metric])
 
+                ax.set_xlabel(r"bpp")
+                ax.tick_params(axis='both', which='major')
+                if metric == "pcqm":
+                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.005))
+                    ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.001))
+                else:
+                    ax.yaxis.set_major_locator(ticker.MultipleLocator(2))
+                    ax.yaxis.set_minor_locator(ticker.MultipleLocator(1))
+                    
+                # Coords
+                ax.yaxis.set_label_coords(-0.12, 0.5)
+                ax.xaxis.set_label_coords(0.5, -0.12)
+                ax.set_xlim(left=0)
                     
                 # Finish Plot
-                ax.legend()
+                ax.legend(loc=4, labelspacing=0.3)
                 ax.grid(visible=True)
 
                 # Save plot
@@ -186,329 +200,216 @@ def plot_rd_figs(key, plot_config, method_configs, dataframes):
 
                 # Cleanup
                 plt.close(fig)
-    
-    return
-    for metric in metrics:
-        figs = {}
-        # Loop through results
-        for method, df in dataframes.items():
-            for sequence in df["sequence"].unique():
-                # Prepare figure
-                if sequence in figs.keys():
-                    fig, ax = figs[sequence]
-                else:
-                    fig = plt.figure(figsize=(2.5, 2))
-                    ax = fig.add_subplot(111)
-                    figs[sequence] = (fig, ax)
 
-                data = df[df["sequence"]== sequence]
-                settings = runs[method]["bd_points"]
+    times_df = pd.DataFrame(times)
+    output_path = os.path.join(plots, "times", f"timings_{key}.csv")
+    times_df.to_csv(output_path, index=False)
+    return bd_models
 
-                my_key = None
-                for key, values in datasets.items():
-                    if sequence in values:
-                        my_key = key
-                if my_key in settings:
-                    settings = settings[my_key]
-                else:
-                    continue
-
-                filtered_data = filter_config_points(data, settings)
-
-                bpp = filtered_data["bpp"]
-                y = filtered_data[metric]
-
-                bjonte_model = Bjontegaard_Model(bpp, y)
-                x_scat, y_scat, x_dat, y_dat = bjonte_model.get_plot_data()
-
-                ax.plot(x_dat, y_dat, 
-                        label=runs[method]["label"][folder],
-                        linestyle=runs[method]["linestyles"],
-                        color=runs[method]["colors"])
-                ax.scatter(x_scat, y_scat, 
-                        marker=runs[method]["markers"],
-                        color=runs[method]["colors"])
-                ax.set_xlabel(r"bpp")
-                ax.set_ylabel(metric_labels[metric])
-                ax.tick_params(axis='both', which='major')
-                if metric == "pcqm":
-                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.002))
-                    ax.yaxis.set_label_coords(-0.2, 0.5)
-                else:
-                    ax.yaxis.set_label_coords(-0.12, 0.5)
-                ax.xaxis.set_label_coords(0.5, -0.12)
-                
-
-        for key, items in figs.items():
-            fig, ax = items
-            ax.legend()
-            ax.grid(visible=True)
-            path = os.path.join(plots, folder, "rd-config_{}_{}.pdf".format(metric, key))
-            fig.subplots_adjust(bottom=style.bottom, top=style.top, left=style.left, right=style.right)
-            fig.savefig(path)
-
-            plt.close(fig)
-
-
-def plot_all_results(dataframe, pareto_dataframe):
-    """
-    Level 1 : Plot per run results
-    """
-    # Plot rd-curves
-    plot_pareto_figs_all(pareto_dataframe)
-
-
-def plot_settings(dataframe, pareto_dataframe, key):
-    if key in ["IT-DL-PCC", "G-PCC", "DeepPCC"]:
-        return # No pareto fronts for this
-
-    metrics = ["pcqm", "bpp", "sym_y_psnr", "sym_p2p_psnr"]
-    for sequence in dataframe["sequence"].unique():
-        df = dataframe[dataframe["sequence"]== sequence].sort_values(by=["q_a", "q_g"])
-        pareto_df = pareto_dataframe[pareto_dataframe["sequence"]== sequence]
-
-        x = df["q_a"].values
-        y = df["q_g"].values
-        if key in "YOGA":
-            x = ((x - 1) / 19)
-            y = ((y - 1) / 19) 
-            
-        X, Y = np.meshgrid(np.linspace(x.min(), x.max(), len(x)), np.linspace(y.min(), y.max(), len(y)))
-
-        for metric in metrics:
-            z = df[metric].values
-            z_interp = griddata((x, y), z, (X,Y), method="linear")
-
-            fig = plt.figure(figsize=(2.5, 2))
-            ax = fig.add_subplot(111)
-
-            ranges = {
-                "bpp": [0.0, 1.8], "pcqm": [0.986, 0.998], "sym_y_psnr": [22, 40], "sym_yuv_psnr": [26, 46], "sym_p2p_psnr": [64, 80],
-            }
-
-            num_levels = {"bpp": 0.1, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 2, "sym_p2p_psnr": 2}
-            num_levels_bar = {"bpp": 0.2, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 2, "sym_p2p_psnr": 4}
-            min, max = ranges[metric]
-            step = num_levels[metric]
-            bar_step = num_levels_bar[metric]
-            levels = np.arange(min, max+step, step)
-            bar_levels = np.arange(min, max+bar_step, bar_step)
-
-            # Pareto in countour
-            cs2 = ax.contourf(X, Y, z_interp, 10, levels=levels, cmap=cm.cool, extend='min')
-            if key in "YOGA":
-                ax.plot((pareto_df["q_a"] - 1)/19, (pareto_df["q_g"]-1)/19, color="red", linewidth=0.5, clip_on=False, label="Pareto-Front")
-
-
-            # Add Settings
-            settings = runs[key]["bd_points"]
-            my_key = None
-            for k, values in datasets.items():
-                if sequence in values:
-                    my_key = k
-            if my_key in settings:
-                settings = settings[my_key]
-            else:
-                continue
-
-            q_as, q_gs = [], []
-            for i, (q_g, q_a) in enumerate(settings):
-                if key == "YOGA":
-                    q_a = (q_a - 1)/19
-                    q_g = (q_g - 1)/19
-                q_as.append(q_a)
-                q_gs.append(q_g)
-
-            #if key == "YOGA":
-            #    ax.scatter(q_as, q_gs, s=40, edgecolors="red", marker="o", facecolors="none", linewidth=4, clip_on=False, label="Select Config.")
-            #else:
-            ax.plot(q_as, q_gs, color="#003366", marker="o", clip_on=False, markersize=5, label="Selected Config.")
-
-            ax.set_xlabel(r"$q^{(A)}$")
-            ax.set_ylabel(r"$q^{(G)}$", rotation=0, ha="right", va="center")
-            ax.set_ylim(0, 1)
-            ax.set_xlim(0, 1)
-            ax.set_xticks([0, 1])
-            ax.set_yticks([0, 1])
-            ax.xaxis.set_label_coords(0.5, -0.03)
-            ax.yaxis.set_label_coords(-0.03, 0.5)
-            ax.legend()
-
-            cbar = fig.colorbar(cs2, boundaries=levels, ticks=bar_levels)
-            cbar.ax.set_ylabel(metric_labels[metric])
-            
-            ax.tick_params(axis='both', which='major', )
-            cbar.ax.tick_params(axis='both', which='major', )
-
-            fig.tight_layout()
-            path = os.path.join(plots, key, "single_{}_{}.pdf".format(metric, sequence))
-            fig.savefig(path, bbox_inches="tight")
-            plt.close(fig)
-
-            # Plot pareto vs. fixed config
-            fig = plt.figure(figsize=(2.5, 2))
-            ax = fig.add_subplot(111)
-
-            filtered_data = filter_config_points(df, settings)
-            ax.plot(pareto_df["bpp"], pareto_df[metric], color='black', label="Pareto-Front")
-
-            bpp = filtered_data["bpp"]
-            y_data = filtered_data[metric]
-
-            bjonte_model = Bjontegaard_Model(bpp, y_data)
-            x_scat, y_scat, x_dat, y_dat = bjonte_model.get_plot_data()
-
-            ax.plot(x_dat, y_dat, 
-                    label=runs[key]["label"],
-                    linestyle=runs[key]["linestyles"],
-                    color=runs[key]["colors"])
-            ax.scatter(x_scat, y_scat, 
-                    marker=runs[key]["markers"],
-                    color=runs[key]["colors"])
-            ax.set_xlabel(r"bpp")
-            ax.set_ylabel(metric_labels[metric])
-            ax.tick_params(axis='both', which='major')
-            ax.xaxis.set_label_coords(0.5, -0.12)
-            ax.yaxis.set_label_coords(-0.2, 0.5)
-            legend = ax.legend()
-
-            ax.grid(visible=False)
-            path = os.path.join(plots, key, "rd-pareto_vs_fixed_{}_{}.pdf".format(metric, sequence))
-            fig.subplots_adjust(bottom=style.bottom, top=style.top, left=style.left, right=style.right)
-            fig.savefig(path)
-
-            plt.close(fig)
-
-
-
-
-
-def plot_rd_figs_all(dataframes, folder):
+def plot_rd_figs_avg(key, plot_configs, method_configs, dataframes):
     """
     All figures as used in the publication
     """
+    plot_config = plot_configs[key]
+    groups = plot_config["groups"]
+    methods = plot_config["methods"]
+
+    bd_models = {}
     for metric in metrics:
-        figs = {}
-        # Loop through results
-        for method, df in dataframes.items():
-            for sequence in df["sequence"].unique():
-                # Prepare figure
-                if sequence in figs.keys():
-                    fig, ax = figs[sequence]
-                else:
-                    fig = plt.figure(figsize=(2.5, 2))
-                    ax = fig.add_subplot(111)
-                    figs[sequence] = (fig, ax)
+        bd_models[metric] = {}
+        for group in groups:
+            bd_models[metric][group] = {}
+            pointclouds = groups[group]
 
-                data = df[df["sequence"]== sequence]
-                settings = runs[method]["bd_points"]
+            # Prepare figure
+            fig = plt.figure(figsize=(2.5, 2))
+            ax = fig.add_subplot(111)
 
-                my_key = None
-                for key, values in datasets.items():
-                    if sequence in values:
-                        my_key = key
-                if my_key in settings:
-                    settings = settings[my_key]
-                else:
-                    continue
+            # Plot all methods:
+            for method in methods:
+                method_bpp, method_metric = [], []
+                for pointcloud in pointclouds:
+                    # Load the rate config for this eval
+                    method_config = method_configs[method][key]
+                    if pointcloud not in method_config["rate-points"].keys():
+                        continue
+                    rate_config = method_config["rate-points"][pointcloud]
+                    plot_config = method_config["info"]
 
-                filtered_data = filter_config_points(data, settings)
+                    # Filter the dataframe by the specified rate points
+                    filtered_df = filter_df_by_config(dataframes[method], rate_config, pointcloud)
+                    filtered_df = filtered_df.sort_values("bpp")
 
-                bpp = filtered_data["bpp"]
-                y = filtered_data[metric]
+                    # Get values
+                    bpp = filtered_df["bpp"]
+                    y = filtered_df[metric]
+                    if metric == "pcqm":
+                        y = 1 - y # PCQM is reported in 1-PCQM
+                    method_bpp.append(bpp)
+                    method_metric.append(y)
+                    
+                method_bpp = np.stack(method_bpp)
+                method_metric = np.stack(method_metric)
+                avg_bpp = np.mean(method_bpp, axis=0)
+                avg_metric = np.mean(method_metric, axis=0)
 
-                bjonte_model = Bjontegaard_Model(bpp, y)
+                # Fit Bjontegaard model and get plot data
+                bjonte_model = Bjontegaard_Model(avg_bpp, avg_metric)
                 x_scat, y_scat, x_dat, y_dat = bjonte_model.get_plot_data()
+                bd_models[metric][group][method] = bjonte_model
 
+                # Plot and scatter curves
                 ax.plot(x_dat, y_dat, 
-                        label=runs[method]["label"][folder],
-                        linestyle=runs[method]["linestyles"],
-                        color=runs[method]["colors"])
+                        label=plot_config["label"],
+                        linestyle=plot_config["linestyle"],
+                        linewidth=0.8,
+                        alpha=0.8,
+                        color=plot_config["color"])
                 ax.scatter(x_scat, y_scat, 
-                        marker=runs[method]["markers"],
-                        color=runs[method]["colors"])
-                ax.set_xlabel(r"bpp")
-                ax.set_ylabel(metric_labels[metric])
-                ax.tick_params(axis='both', which='major')
-                if metric == "pcqm":
-                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.002))
-                    ax.yaxis.set_label_coords(-0.2, 0.5)
-                else:
-                    ax.yaxis.set_label_coords(-0.12, 0.5)
-                ax.xaxis.set_label_coords(0.5, -0.12)
-                
+                        marker=plot_config["marker"],
+                        s=5,
+                        color=plot_config["color"])
+                    
+            # Plot labeling
+            ax.set_xlabel(r"bpp")
+            ax.set_ylabel(metric_labels[metric])
+            ax.tick_params(axis='both', which='major')
+            if metric == "pcqm":
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(0.005))
+                ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.001))
+            else:
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(2))
+                ax.yaxis.set_minor_locator(ticker.MultipleLocator(1))
 
-        for key, items in figs.items():
-            fig, ax = items
-            ax.legend()
+            ax.yaxis.set_label_coords(-0.2, 0.5)
+            ax.xaxis.set_label_coords(0.5, -0.12)
+            ax.set_xlim(left=0)
+
+                    
+            # Finish Plot
+            if group == "sparse" and metric == "sym_y_psnr":
+                ax.legend(loc=2, labelspacing=0.3)
+            else:
+                ax.legend(loc=4, labelspacing=0.3)
             ax.grid(visible=True)
-            path = os.path.join(plots, folder, "rd-config_{}_{}.pdf".format(metric, key))
+
+            # Save plot
+            base_path = os.path.join(plots, key)
+            if not os.path.exists(base_path):
+                os.makedirs(base_path)
+
+            path = os.path.join(base_path, "rd-config_avg_{}_{}.pdf".format(metric, group))
+
             fig.subplots_adjust(bottom=style.bottom, top=style.top, left=style.left, right=style.right)
             fig.savefig(path)
 
+            # Cleanup
             plt.close(fig)
 
 
-def compute_bd_deltas(dataframes, references, test, dir):
+    
+    return bd_models
+    
+
+def plot_area_figs(dataframe, method, pointcloud):
+    df = dataframe[dataframe["sequence"]==pointcloud].sort_values(by=["q_a", "q_g"])
+    df = df[df["scale_factor"]== 1].sort_values(by=["q_a", "q_g"])
+
+    x = df["q_a"].values
+    y = df["q_g"].values
+            
+    X, Y = np.meshgrid(np.linspace(x.min(), x.max(), len(x)), np.linspace(y.min(), y.max(), len(y)))
+
+    area_metrics = ["bpp", "pcqm", "sym_yuv_psnr", "sym_y_psnr", "sym_p2p_psnr", "sym_d2_psnr"]
+    for metric in area_metrics:
+        z = df[metric].values
+        if metric == "pcqm":
+            z = 1 - z
+
+        z_interp = griddata((x, y), z, (X,Y), method="linear")
+
+        fig = plt.figure(figsize=(2.5, 2))
+        ax = fig.add_subplot(111)
+
+        ranges = {
+            "bpp": [0.0, 1.8], "pcqm": [0.986, 0.998], "sym_y_psnr": [22, 40], "sym_yuv_psnr": [26, 46], "sym_p2p_psnr": [64, 80], "sym_d2_psnr": [64, 84],
+        }
+
+        num_levels = {"bpp": 0.1, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 1, "sym_p2p_psnr": 1, "sym_d2_psnr": 1}
+        num_levels_bar = {"bpp": 0.2, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 2, "sym_p2p_psnr": 4, "sym_d2_psnr": 4}
+        min, max = ranges[metric]
+        step = num_levels[metric]
+        bar_step = num_levels_bar[metric]
+        levels = np.arange(min, max+step, step)
+        bar_levels = np.arange(min, max+bar_step, bar_step)
+
+        # Pareto in countour
+        cs2 = ax.contourf(X, Y, z_interp, 10, levels=levels, cmap=cm.cool, extend='min')
+
+        """
+        q_as, q_gs = [], []
+        for i, (q_g, q_a) in enumerate(settings):
+            q_as.append(q_a)
+            q_gs.append(q_g)
+
+        ax.plot(q_as, q_gs, color="#003366", marker="o", clip_on=False, markersize=5, label="Selected Config.")
+        """
+
+        ax.set_xlabel(r"$q_a$")
+        ax.set_ylabel(r"$q_g$", rotation=0, ha="right", va="center")
+        ax.set_ylim(0, 1)
+        ax.set_xlim(0, 1)
+        ax.set_xticks([0, 1])
+        ax.set_yticks([0, 1])
+        ax.xaxis.set_label_coords(0.5, -0.03)
+        ax.yaxis.set_label_coords(-0.03, 0.5)
+        #ax.legend()
+
+        cbar = fig.colorbar(cs2, boundaries=levels, ticks=bar_levels)
+        cbar.ax.set_ylabel(metric_labels[metric])
+            
+        ax.tick_params(axis='both', which='major', )
+        cbar.ax.tick_params(axis='both', which='major', )
+
+        fig.tight_layout()
+        path = os.path.join(plots, "areas", "{}_{}_{}.pdf".format(method, metric, pointcloud))
+        fig.savefig(path, bbox_inches="tight")
+        plt.close(fig)
+
+
+
+
+
+
+
+def compute_bd_deltas(bd_models, reference, file_key):
     results = []
-    for ref in references:
-        for metric in metrics:
-            # Get G-PCC config for BD Points
-            ref_data = dataframes[ref]
-            test_data = dataframes[test]
-            for sequence in ref_data["sequence"].unique():
-                # Get Reference data
-                ref_df = ref_data[ref_data["sequence"]== sequence]
+    for metric, sub_dict in bd_models.items():
+        for pointcloud, sub_sub_dict in sub_dict.items():
+            test_model = sub_sub_dict.pop(reference)
 
-                ref_settings = runs[ref]["bd_points"]
-                key = None
-                for k, values in datasets.items():
-                    if sequence in values:
-                        key = k
-                if key in ref_settings:
-                    ref_settings = ref_settings[key]
-                else:
-                    continue
-                filtered_ref = filter_config_points(ref_df, ref_settings)
-
-                # Get test data
-                test_df = test_data[test_data["sequence"]== sequence]
-                test_settings = runs[test]["bd_points"]
-                key = None
-                for k, values in datasets.items():
-                    if sequence in values:
-                        key = k
-                if key in test_settings:
-                    test_settings = test_settings[key]
-                else:
-                    continue
-                filtered_test = filter_config_points(test_df, test_settings)
-
-
-                bpp = filtered_ref["bpp"]
-                y = filtered_ref[metric]
-                ref_model = Bjontegaard_Model(bpp, y)
-
-                bpp = filtered_test["bpp"]
-                y = filtered_test[metric]
-                test_model = Bjontegaard_Model(bpp, y)
+            for method, ref_model in sub_sub_dict.items():
+                print(method)
 
                 delta = Bjontegaard_Delta()
                 psnr_delta = delta.compute_BD_PSNR(ref_model, test_model)
                 rate_delta = delta.compute_BD_Rate(ref_model, test_model)
-
+                
+                print(psnr_delta, rate_delta)
                 results.append({
-                    "reference": ref,
-                    "test": test,
-                    "sequence": sequence,
                     "metric": metric,
-                    "psnr_delta": psnr_delta,
-                    "rate_delta": rate_delta
+                    "pointCloud": pointcloud,
+                    "method": method,
+                    "BD-PSNR": psnr_delta,
+                    "BD-Rate": rate_delta * 100 # In Percent
                 })
 
     results_df = pd.DataFrame(results)
-    output_path = os.path.join(plots, dir, f"bd_deltas_{test}.csv")
+    output_path = os.path.join(plots, "bd_results", f"bd_deltas_{file_key}.csv")
     results_df.to_csv(output_path, index=False)
+
+    return
+
 
 
 def load_csvs(keys):

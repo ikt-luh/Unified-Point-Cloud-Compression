@@ -1,8 +1,8 @@
 main_jpeg:
   info:
     label: "JPEG Pleno PCC"
-    linestyle: "dotted"
-    color: "orange"
+    linestyle: "-."
+    color: "#e31b23"
     marker: "."
   rate-points:
     soldier: 

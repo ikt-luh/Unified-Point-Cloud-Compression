@@ -1,7 +1,7 @@
 main_8i:
   info:
     label: "IT-DL-PCC"
-    linestyle: "-"
+    linestyle: "--"
     color: "brown"
     marker: "."
   rate-points:
@@ -18,31 +18,31 @@ main_8i:
 main_jpeg:
   info:
     label: "IT-DL-PCC"
-    linestyle: "-"
+    linestyle: "--"
     color: "brown"
     marker: "."
   rate-points:
     soldier: 
       IDX: [19,2,0,25]
     boxer :
-      IDX: [13,23,20,27]
+      IDX: [13,24,17,27]
     thaidancer :
       IDX: [13,11,5,20]
     bouquet : 
-      IDX: [3,17,5,15]
+      IDX: [8,2,5,15]
     stmichael: 
       IDX: [13,2,0,25]
     CITISUP :
-      IDX: [14,19,1,20]
+      IDX: [13,6,1,20]
     EPFL :
       IDX: [13,8,23,25]
     Facade : 
-      IDX: [8,18,1,20]
+      IDX: [13,18,1,20]
     House :
-      IDX: [13,3,17,26]
+      IDX: [8,3,17,27]
     shiva : 
-      IDX: [13,3,25,21]
+      IDX: [8,18,22,26]
     Unicorn:
-      IDX: [0,20,23,28]
+      IDX: [0,15,20,25]
     Arco :
       IDX: [13,5,1,21]

@@ -1,0 +1,6 @@
+metric,pointCloud,method,BD-PSNR,BD-Rate
+pcqm,8iVFB,Ablation_Inverse_nn,-0.0011827913260916965,45.05491008186635
+sym_y_psnr,8iVFB,Ablation_Inverse_nn,0.4655579938386117,-35.483487142204204
+sym_p2p_psnr,8iVFB,Ablation_Inverse_nn,-1.5857945508942586,-89.69653717579094
+sym_d2_psnr,8iVFB,Ablation_Inverse_nn,-2.5914352160377394,-48.36604328019723
+sym_yuv_psnr,8iVFB,Ablation_Inverse_nn,0.7590442127614455,-39.02605939858971

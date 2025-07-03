@@ -2,7 +2,7 @@ main_8i:
   info:
     label: "YOGA"
     linestyle: "-."
-    color: "black"
+    color: "#1a9e00"
     marker: "."
   rate-points:
     longdress: 
