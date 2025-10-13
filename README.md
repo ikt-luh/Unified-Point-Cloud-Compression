@@ -1,11 +1,15 @@
 # Learned Compression of Point Cloud Geometry and Attributes in a Single Model through Multimodal Rate-Control 
 
+## Publications
+- **Main paper (pre-print):**  
+  [*Learned Compression of Point Cloud Geometry and Attributes in a Single Model through Multimodal Rate-Control*](https://arxiv.org/abs/2408.00599)
 
-## Overview
-The branch clean contains the code for the model.
+- **Demo paper (MMSys’25):**  
+  [*Learned Compression in Adaptive Point Cloud Streaming: Opportunities, Challenges and Limitations*](https://dl.acm.org/doi/10.1145/3712676.3719266)
 
-Additionally, the branch demo_unified contains a implementation as used for the Demo [Learned Compression in Adaptive Point Cloud Streaming: Opportunities, Challenges and Limitations](https://github.com/ikt-luh/Demo-Learned-Point-Cloud-Compression) presented at MMSys'25.
-
+## Branches
+-  **`clean`** - contains experimental code used in the main paper.
+-  **`demo_unified`** - includes the adapted implementation for the MMSys'25 [demo](https://github.com/ikt-luh/Demo-Learned-Point-Cloud-Compression).
 
 ## Usage
 We used Python 3.10.12 for our experiments.
