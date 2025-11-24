@@ -6,28 +6,24 @@ settings = {
     "Main": {
         "soldier": (1, 0.4, 0.2),
         "bouquet": (1, 0.2, 0.1),
-        #"shiva": (2, 0.3, 0.2),
         "House": (4, 0.4, 0.0),
         "CITISUP": (4, 0.4, 0.0),
     },
     "IT-DL-PCC": {
         "soldier": 0,
         "bouquet": 2,
-        #"shiva": 2,
         "House": 3,
         "CITISUP": 1,
     },
     "G-PCC": {
         "soldier": 3,
         "bouquet": 2,
-        #"shiva": 2,
         "House": 2,
         "CITISUP": 3,
     },
     "V-PCC": {
         "soldier": 3,
         "bouquet": 2,
-        #"shiva": 2,
         "House": 1,
         "CITISUP": 2,
     },
@@ -36,14 +32,8 @@ settings = {
 sequences = {
     "soldier": ((780, 190, 370), (100, 10, 100), (210, 70, 100), 0, "top"),
     "bouquet": ((680, 0, 520), (320, 320, 100), (370, 500, 140), 0, "back"),
-    #"EPFL": ((610, -100, 700), (360, 360, 100), (230, 500, 100), 0, "bottom"),
     "CITISUP": ((630, -110, 600), (140, 500, 140), (300, 550, 140), 270, "top"),
     "House": ((600, -200, 700), (310, 310, 100), (300, 680, 100),90, "top"),
-
-    #"longdress": ((780, 190, 350), (125, 30, 80), (150, 190, 80), "top"),
-    #"loot": ((780, 190, 350), (160, 5, 100), (190, 215, 100), "top"),
-    #"redandblack": ((780, 180, 360), (100, 6, 100), (95, 220, 100), "top"),
-    #"Arco": ((750, 160, 400), (150, 130, 80), (200, 250, 80), "top"),
 }
 path_skeleton = "../results/{}/renders_test/{}/{}_s{}_a{}_g{}_{}.png"
 path_skeleton_related = "../results/{}/renders_test/{}/{}_R{}_{}.png"

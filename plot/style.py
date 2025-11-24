@@ -13,7 +13,6 @@ plt.rcParams.update({
     'ytick.labelsize': 9,              # Font size for y-tick labels
     'lines.linewidth': 1.5,              # Default line width
     'lines.markersize': 3,             # Default marker size
-    #'legend.fontsize': 8,              # Font size for legend
     'legend.fontsize': 8,              # Font size for legend (Smaller for supplementary material)
     'legend.frameon': True,            # Legend frame on
     'legend.framealpha': 1.0,          # Legend frame opacity

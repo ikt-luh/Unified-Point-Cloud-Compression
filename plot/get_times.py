@@ -7,9 +7,9 @@ settings = {
         {"scale_factor": "1"},
         {"scale_factor": "2"},
         {"scale_factor": "4"}
-    ]
+    ],
     "IT-DL-PCC": [
-        {"scale_factor": "1"}
+        {"scale_factor": "1"},
     ]
 }
 

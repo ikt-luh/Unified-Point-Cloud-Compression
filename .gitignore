@@ -19,9 +19,7 @@
 **/__pycache__/
 **/.ipynb_checkpoints
 
-
 !requirements.txt
-
 !results/.gitkeep
 
 dependencies/*
