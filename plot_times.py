@@ -5,12 +5,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
 
+plt.rcParams.update({
+    "font.size": 8,             # base font size
+    "axes.labelsize": 9,        # y/x label
+    "xtick.labelsize": 8,       # tick labels
+    "ytick.labelsize": 8,
+    "legend.fontsize": 8,
+})
+
 def plot_encoding_times(csv_path):
     df = pd.read_csv(csv_path)
 
     # === USER SETTINGS ===
     experiment_labels = {
-        "Main": "Ours",
+        "Main": "Proposed",
         "G-PCC": "G-PCC",
         "V-PCC": "V-PCC",
         "IT-DL-PCC": "IT-DL-PCC",
@@ -18,12 +26,12 @@ def plot_encoding_times(csv_path):
         "JPEG Pleno PCC": "JPEG Pleno PCC",
     }
     colors = {
-        "Main": "blue",
+        "Main": "#1B3A6F",
         "G-PCC": "#787878",
-        "V-PCC": "black",
-        "IT-DL-PCC": "brown",
-        "DeepPCC": "#03b5fc",
-        "JPEG Pleno PCC": "#e31b23",
+        "V-PCC": "#4D4D4D",
+        "IT-DL-PCC": "#228B22",
+        "DeepPCC": "#FF7F00",
+        "JPEG Pleno PCC": "#B8860B",
     }
 
     bar_labels = {

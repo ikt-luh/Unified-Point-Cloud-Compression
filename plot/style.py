@@ -8,13 +8,13 @@ plt.rcParams.update({
     'font.size': 8,                    # General font size for labels and titles
     'font.family': 'serif',            # Use a serif font
     'axes.titlesize': 8,               # Font size for axes titles
-    'axes.labelsize': 8,               # Font size for axis labels
-    'xtick.labelsize': 7,              # Font size for x-tick labels
-    'ytick.labelsize': 7,              # Font size for y-tick labels
+    'axes.labelsize': 9,               # Font size for axis labels
+    'xtick.labelsize': 9,              # Font size for x-tick labels
+    'ytick.labelsize': 9,              # Font size for y-tick labels
     'lines.linewidth': 1.5,              # Default line width
     'lines.markersize': 3,             # Default marker size
     #'legend.fontsize': 8,              # Font size for legend
-    'legend.fontsize': 6,              # Font size for legend (Smaller for supplementary material)
+    'legend.fontsize': 8,              # Font size for legend (Smaller for supplementary material)
     'legend.frameon': True,            # Legend frame on
     'legend.framealpha': 1.0,          # Legend frame opacity
     'axes.axisbelow': True,            # Place grid and ticks below plot elements
@@ -37,11 +37,11 @@ markers = [ "x", "x", "x", "x", "x"]
 
 
 
-
+# Where axis borders are (in percent)
 top = .97
-bottom = .16
-left = .22
-right = .97
+bottom = .18
+left = .2
+right = .96
 runs = {
     "G-PCC": {
         "label":
@@ -158,5 +158,5 @@ metric_labels = {
     "sym_y_psnr" : r"Y-PSNR [dB]",
     "sym_yuv_psnr" : r"YUV-PSNR [dB]",
     "sym_p2p_psnr" : r"D1-PSNR [dB]",
-    "sym_d2_psnr" : r"D2-PSNR [dB]",
+    "sym_d2_psnr" : r"D2-SNR [dB]",
 }

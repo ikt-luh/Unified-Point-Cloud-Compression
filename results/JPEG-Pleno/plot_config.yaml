@@ -2,7 +2,7 @@ main_jpeg:
   info:
     label: "JPEG Pleno PCC"
     linestyle: "-."
-    color: "#e31b23"
+    color: "#B8860B"
     marker: "."
   rate-points:
     soldier: 

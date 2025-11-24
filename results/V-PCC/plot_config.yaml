@@ -2,7 +2,7 @@ main_8i:
   info:
     label: "V-PCC"
     linestyle: "-."
-    color: "black"
+    color: "#4D4D4D" #"black"
     marker: "."
   rate-points:
     longdress: 
@@ -17,7 +17,7 @@ main_jpeg:
   info:
     label: "V-PCC"
     linestyle: "-."
-    color: "black"
+    color: "#4D4D4D" 
     marker: "."
   rate-points:
     soldier: 

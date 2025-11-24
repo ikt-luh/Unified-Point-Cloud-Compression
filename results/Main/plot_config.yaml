@@ -1,8 +1,8 @@
 main_8i:
   info:
-    label: "Ours"
+    label: "Proposed"
     linestyle: "-"
-    color: "blue"
+    color: "#1B3A6F" #"blue"
     marker: "."
   rate-points:
     longdress: 
@@ -23,9 +23,9 @@ main_8i:
       scale_factor: [2, 1, 1, 1]
 main_jpeg:
   info:
-    label: "Ours"
+    label: "Proposed"
     linestyle: "-"
-    color: "blue"
+    color: "#1B3A6F" 
     marker: "."
   rate-points:
     soldier: 
@@ -80,7 +80,7 @@ Ablation_Shepard:
   info:
     label: "MSE"
     linestyle: "-"
-    color: "blue"
+    color: "#1B3A6F"
     marker: "."
   rate-points:
     longdress: 
@@ -101,9 +101,9 @@ Ablation_Shepard:
       scale_factor: [1, 1, 1, 1]
 ablation_fixed:
   info:
-    label: "Ours (1 Model)"
+    label: "Proposed (Variable-Rate)"
     linestyle: "-"
-    color: "blue"
+    color: "#1B3A6F"
     marker: "."
   rate-points:
     longdress: 
@@ -124,9 +124,9 @@ ablation_fixed:
       scale_factor: [1, 1, 1, 1]
 ablation_lambdaFunc:
   info:
-    label: "Quadratic"
-    linestyle: "-"
-    color: "blue"
+    label: "quadratic $\\lambda_a(q_a)/\\lambda_g(q_g)$" #$\\lambda(q) = (\\lambda^{\\max} - \\lambda^{\\min})\\, q^2 + \\lambda^{\\min}$"
+    linestyle: "-" 
+    color: "#1B3A6F"
     marker: "."
   rate-points:
     longdress: 
@@ -149,7 +149,7 @@ ablation_inverseScaling:
   info:
     label: "Symmetric Inverse Gain"
     linestyle: "-"
-    color: "blue"
+    color: "#1B3A6F"
     marker: "."
   rate-points:
     longdress: 

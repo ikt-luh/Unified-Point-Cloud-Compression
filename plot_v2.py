@@ -96,7 +96,13 @@ def plot_experiments():
 
 
     for key in plot_areas:
-        plot_area_figs(dataframes[key], key, "soldier")
+        plot_area_figs(dataframes[key], key, "longdress")
+
+    # Plot legend (hacky)
+    plot_wide_legend(
+        method_configs=rate_configs,                
+        plot_configs=plot_configs
+    )
 
 
     
@@ -206,6 +212,56 @@ def plot_rd_figs(key, plot_configs, method_configs, dataframes):
     times_df.to_csv(output_path, index=False)
     return bd_models
 
+def plot_wide_legend(method_configs, plot_configs, keys=("main_8i","main_jpeg"),
+                     filename="legend.pdf", dpi=300):
+    # preserve method order as it appears in the plot configs
+    ordered_methods = []
+    seen = set()
+    for k in keys:
+        if k not in plot_configs:
+            continue
+        for m in plot_configs[k].get("methods", []):
+            if m not in seen:
+                ordered_methods.append(m)
+                seen.add(m)
+
+    fig, ax = plt.subplots(figsize=(8, 0.6))  # wide, short strip
+    handles, labels = [], []
+
+    for m in ordered_methods:
+        # pick the first key where this method has style info
+        style = None
+        for k in keys:
+            if m in method_configs and k in method_configs[m]:
+                style = method_configs[m][k]["info"]
+                break
+        if style is None:
+            continue  # method missing style; skip
+
+        line, = ax.plot([], [],
+                        label=style["label"],
+                        linestyle=style["linestyle"],
+                        linewidth=1,
+                        color=style["color"],
+                        marker=style["marker"],
+                        markersize=5)
+        handles.append(line)
+        labels.append(style["label"])
+
+    ax.axis("off")
+
+    legend = ax.legend(handles=handles, labels=labels,
+                       loc="center", frameon=False,
+                       ncol=len(handles),            # single row across the page
+                       handletextpad=0.5, columnspacing=1.0)
+
+    fig.canvas.draw()
+    path = os.path.join(plots, filename)
+    fig.savefig(path)
+    plt.close(fig)
+
+
+
 def plot_rd_figs_avg(key, plot_configs, method_configs, dataframes):
     """
     All figures as used in the publication
@@ -222,7 +278,7 @@ def plot_rd_figs_avg(key, plot_configs, method_configs, dataframes):
             pointclouds = groups[group]
 
             # Prepare figure
-            fig = plt.figure(figsize=(2.5, 2))
+            fig = plt.figure(figsize=(3, 2))
             ax = fig.add_subplot(111)
 
             # Plot all methods:
@@ -262,12 +318,12 @@ def plot_rd_figs_avg(key, plot_configs, method_configs, dataframes):
                 ax.plot(x_dat, y_dat, 
                         label=plot_config["label"],
                         linestyle=plot_config["linestyle"],
-                        linewidth=0.8,
-                        alpha=0.8,
+                        linewidth=1,
+                        alpha=0.8, #0.8
                         color=plot_config["color"])
                 ax.scatter(x_scat, y_scat, 
                         marker=plot_config["marker"],
-                        s=5,
+                        s=15,
                         color=plot_config["color"])
                     
             # Plot labeling
@@ -275,22 +331,30 @@ def plot_rd_figs_avg(key, plot_configs, method_configs, dataframes):
             ax.set_ylabel(metric_labels[metric])
             ax.tick_params(axis='both', which='major')
             if metric == "pcqm":
-                ax.yaxis.set_major_locator(ticker.MultipleLocator(0.005))
+                # Set y lims to upper 1
+                ax.set_ylim(ax.get_ylim()[0], 1.0)
+
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(0.01))
                 ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.001))
+                ax.yaxis.set_label_coords(-0.18, 0.5)
             else:
                 ax.yaxis.set_major_locator(ticker.MultipleLocator(2))
                 ax.yaxis.set_minor_locator(ticker.MultipleLocator(1))
+                ax.yaxis.set_label_coords(-0.15, 0.5)
 
-            ax.yaxis.set_label_coords(-0.2, 0.5)
-            ax.xaxis.set_label_coords(0.5, -0.12)
+            if group in ["sparse", "dense"]:
+                ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.5))
+            else:
+                ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+
+            ax.xaxis.set_label_coords(0.5, -0.14)
             ax.set_xlim(left=0)
 
                     
             # Finish Plot
-            if group == "sparse" and metric == "sym_y_psnr":
-                ax.legend(loc=2, labelspacing=0.3)
-            else:
-                ax.legend(loc=4, labelspacing=0.3)
+            if key not in ["main_8i", "main_jpeg"]:
+                ax.legend(loc=4, labelspacing=0.3, bbox_to_anchor=(1,0)) # Was no font size
+
             ax.grid(visible=True)
 
             # Save plot
@@ -332,10 +396,10 @@ def plot_area_figs(dataframe, method, pointcloud):
         ax = fig.add_subplot(111)
 
         ranges = {
-            "bpp": [0.0, 1.8], "pcqm": [0.986, 0.998], "sym_y_psnr": [22, 40], "sym_yuv_psnr": [26, 46], "sym_p2p_psnr": [64, 80], "sym_d2_psnr": [64, 84],
+            "bpp": [0.0, 2.4], "pcqm": [0.986, 0.998], "sym_y_psnr": [22, 40], "sym_yuv_psnr": [26, 46], "sym_p2p_psnr": [64, 80], "sym_d2_psnr": [64, 84],
         }
 
-        num_levels = {"bpp": 0.1, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 1, "sym_p2p_psnr": 1, "sym_d2_psnr": 1}
+        num_levels = {"bpp": 0.2, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 1, "sym_p2p_psnr": 1, "sym_d2_psnr": 1}
         num_levels_bar = {"bpp": 0.2, "pcqm": 0.002, "sym_yuv_psnr": 5, "sym_y_psnr": 2, "sym_p2p_psnr": 4, "sym_d2_psnr": 4}
         min, max = ranges[metric]
         step = num_levels[metric]
@@ -345,6 +409,9 @@ def plot_area_figs(dataframe, method, pointcloud):
 
         # Pareto in countour
         cs2 = ax.contourf(X, Y, z_interp, 10, levels=levels, cmap=cm.cool, extend='min')
+
+        ax.contour(cs2, colors="k", levels=levels, linewidths=0.2)
+        ax.grid(c='k', ls='-', alpha=0.3)
 
         """
         q_as, q_gs = [], []

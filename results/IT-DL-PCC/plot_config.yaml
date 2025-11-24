@@ -2,7 +2,7 @@ main_8i:
   info:
     label: "IT-DL-PCC"
     linestyle: "--"
-    color: "brown"
+    color: "#228B22" #"brown"
     marker: "."
   rate-points:
     longdress: 
@@ -19,7 +19,7 @@ main_jpeg:
   info:
     label: "IT-DL-PCC"
     linestyle: "--"
-    color: "brown"
+    color: "#228B22"
     marker: "."
   rate-points:
     soldier: 

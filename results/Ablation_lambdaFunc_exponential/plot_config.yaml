@@ -1,8 +1,8 @@
 ablation_lambdaFunc:
   info:
-    label: "Exponential"
-    linestyle: "-"
-    color: "red"
+    label: "exponential $\\lambda_a(q_a)/\\lambda_g(q_g)$" #"$\\lambda(q) = 2^{\\,q \\cdot a} + \\lambda^\\min$ \n $a=\\log_2(\\lambda^{\\max} - \\lambda^{\\min})$"
+    linestyle: ":"
+    color: "#228B22"
     marker: "."
   rate-points:
     longdress: 

@@ -1,8 +1,8 @@
 ablation_lambdaFunc:
   info:
-    label: "Linear"
-    linestyle: "-"
-    color: "green"
+    label: "linear $\\lambda_a(q_a)/\\lambda_g(q_g)$" #"$\\lambda(q) = (\\lambda^{\\max} - \\lambda^{\\min}) \\, q + \\lambda^{\\min}$"
+    linestyle: "-."
+    color: "#E41A1C"
     marker: "."
   rate-points:
     longdress: 

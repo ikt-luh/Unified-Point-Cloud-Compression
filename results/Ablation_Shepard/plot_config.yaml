@@ -1,8 +1,8 @@
 Ablation_Shepard:
   info:
     label: "MSE + IWD"
-    linestyle: "-"
-    color: "red"
+    linestyle: "-."
+    color: "#E41A1C"
     marker: "."
   rate-points:
     longdress: 

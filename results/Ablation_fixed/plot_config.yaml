@@ -1,8 +1,8 @@
 ablation_fixed:
   info:
     label: "Fixed (4 Models)"
-    linestyle: "-"
-    color: "red"
+    linestyle: "-."
+    color: "#E41A1C"
     marker: "."
   rate-points:
     longdress: 
