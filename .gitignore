@@ -20,6 +20,10 @@
 **/.ipynb_checkpoints
 
 !requirements.txt
+results/
+!results/*/test.csv
+!results/*/config.yaml
+!results/*/plot_config.yaml
 !results/.gitkeep
 
 dependencies/*
