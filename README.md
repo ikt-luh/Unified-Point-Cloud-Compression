@@ -13,21 +13,6 @@
 
 ## Overview
 
-
-## Approach
-
-
-### Architecture
-
-## Results
-
-
-
-### Latency
-
-### Visual Results
-
-
 ## Usage
 We used Python 3.10.12 for our experiments.
 
@@ -132,23 +117,21 @@ python train.py --config=./configs/Ours.yaml
 ```
 
 Training takes roughly 1-2 days on an NVIDIA RTX 4090. 
-Trained weights: COMING SOON
 
 
-### Evaluation
-To rerun the evaluation, run 
+### Results
+Use the weights from here []() to rerun the evaluation with our dataset.
 
-```
-python evaluate.py 
-```
+You can get the test data from [https://plenodb.jpeg.org/](https://plenodb.jpeg.org/).
+Download the **JPEG Pleno PCC CTTC Point Clouds** dataset and the **8i Voxelized Full Bodies** dataset.
+Unpack all point clouds, and put them into data/datasets/8iVFBv2 and data/datasets/jpeg_testset. 
 
-and to create the plots after evaluation, run 
-
-```
-python plot.py 
+Then re-run the evaluation using 
+```python3
+    python evaluate.py
 ```
 
-(For both, you migth adapt which results you want to use for regenerating the evaluations)
+
 
 
 
