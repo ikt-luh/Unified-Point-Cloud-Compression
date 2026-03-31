@@ -8,14 +8,6 @@ Essentially, we provide a method for training a learning-based compression model
 - We showed a [Demo](https://dl.acm.org/doi/abs/10.1145/3712676.3719266) of a preliminary version of this model at the MMsys'25 Conference for Streaming with a Live Recording and 2 Jetson Devices.
 - An early stage of this work is available in the [Pre-Print](https://arxiv.org/abs/2408.00599). The code of the pre-print results can be found in branch ***pre-print***
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Approach](#approach)
-- [Results](#results)
-- [Usage](#usage)
-- [Citation](#citation)
-
 
 ## Data 
 ### Testset
