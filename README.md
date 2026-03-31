@@ -4,9 +4,9 @@ This repository contains code for the paper [Unified Compression of Point Cloud 
 
 Essentially, we provide a method for training a learning-based compression model with a single encoder and decoder which allows to adaptively control the geometry and attribute quality and thus coding rate during inference.
 
-** News: ** 
+***News:*** 
 - We showed a [Demo](https://dl.acm.org/doi/abs/10.1145/3712676.3719266) of a preliminary version of this model at the MMsys'25 Conference for Streaming with a Live Recording and 2 Jetson Devices.
-- An early stage of this work is available in the [Pre-Print] 
+- An early stage of this work is available in the [Pre-Print](https://arxiv.org/abs/2408.00599). The code of the pre-print results can be found in branch ***pre-print***
 
 ## Table of Contents
 
