@@ -1,7 +1,12 @@
-# Learned Compression of Point Cloud Geometry and Attributes in a Single Model through Multimodal Rate-Control 
+# Title 
 
-[![Paper](TODO)](TODO)
+This repository contains code for the paper [Unified Compression of Point Cloud Geometry and Attributes through Variable-Rate Conditioning]() presented at the ACM MMSys'26 Conference.
 
+Essentially, we provide a method for training a learning-based compression model with a single encoder and decoder which allows to adaptively control the geometry and attribute quality and thus coding rate during inference.
+
+** News: ** 
+- We showed a [Demo](https://dl.acm.org/doi/abs/10.1145/3712676.3719266) of a preliminary version of this model at the MMsys'25 Conference for Streaming with a Live Recording and 2 Jetson Devices.
+- An early stage of this work is available in the [Pre-Print] 
 
 ## Table of Contents
 
@@ -10,8 +15,6 @@
 - [Results](#results)
 - [Usage](#usage)
 - [Citation](#citation)
-
-## Overview
 
 
 ## Data 
@@ -28,13 +31,13 @@ Alternatively, ready-made scripts for a easily available training routine on the
 Note that the results in the publication were generated using the jpeg trainset to allow for fair comparison to the JPEG Pleno PCC coding solution.
 
 
-## Usage
+
+## Setup
 We used Python 3.10.12 for our experiments.
 
-### Setup
 Set up the virtual environment
 ```
-python -m venv .env
+python3 -m venv .env
 source .env/bin/activate
 python -m pip install -r requirements.txt
 ```
@@ -42,7 +45,8 @@ python -m pip install -r requirements.txt
 ### MinkowskiEngine
 For CUDA > 12, we will need to patch the headers in some code and install MinkowskiEngine locally:
 ```
-git clone --recursive "https://github.com/NVIDIA/MinkowskiEngine"
+cd dependencies
+git clone --recursive https://github.com/NVIDIA/MinkowskiEngine
 cd MinkowkskiEngine
 sed -i '1 i\#include <thrust/execution_policy.h>' src/3rdparty/concurrent_unordered_map.cuh \
     && sed -i '1 i\#include <thrust/execution_policy.h>' src/convolution_kernel.cuh \
@@ -53,6 +57,7 @@ python setup.py install --force_cuda --blas=openblas
 
 ### Open3D
 ```
+cd dependencies
 git clone https://github.com/isl-org/Open3D
 cd Open3D
 
@@ -148,12 +153,14 @@ Then re-run the evaluation using
 
 ## Citation
 
-If you find our work helpful, please consider citing us in your work:
+If you find our work helpful, please consider citing:
 ```
-@article{rudolph2024learnedcompressionpointcloud,
-      title={Learned Compression of Point Cloud Geometry and Attributes in a Single Model through Multimodal Rate-Control}, 
-      author={Michael Rudolph and Aron Riemenschneider and Amr Rizk},
-      journal={arXiv preprint arXiv:2408.00599},
-      year={2024},
+@inproceedings{rudolph2026unified,
+    title={Unified Compression of Point Cloud Geometry and Attributes through Variable-Rate Conditioning}, 
+    author={Michael Rudolph and Aron Riemenschneider and Amr Rizk},
+    booktitle = {ACM Multimedia Systems Conference 2026 (MMSys '26)},
+    year      = {2026},
+    publisher = {ACM},
+    doi       = {10.1145/3793853.3795742},
 }
 ```
