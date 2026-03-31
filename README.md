@@ -11,14 +11,15 @@ Essentially, we provide a method for training a learning-based compression model
 
 ## Data 
 ### Testset
-Download the [JPEG Pleno CPCC CTTC Point Clouds](https://plenodb.jpeg.org/pc/JPEG_Pleno_PCC_CTTC.zip) dataset and place the *.ply files it under [./data/datasets/jpeg_testset](./data/datasets/jpeg_testset)
+Download the [JPEG Pleno CPCC CTTC Point Clouds](https://plenodb.jpeg.org/pc/JPEG_Pleno_PCC_CTTC.zip) dataset and place the *.ply files under _./data/datasets/jpeg_testset/_
 
 ### Training Dataset
-The training set is manually collected from various sources. For reconstructring the dataset, collect the point clouds listed in [./data/datasets/jpeg_128/config.yaml](./data/datasets/jpeg_128/config.yaml) into [./data/datasets/jpeg_testset](./data/datasets/jpeg_testset).
+The training set is manually collected from various sources. For reconstructring the dataset, collect the point clouds listed in _./data/datasets/jpeg_128/config.yaml_ into _./data/datasets/jpeg_testset](./data/datasets/jpeg_trainset_
 
 Alternatively, ready-made scripts for a easily available training routine on the UVG Point Cloud dataset are available. 
 ```
-    # TODO: How to run
+cd data/utils
+python3 download_raw_pointclouds.py
 ```
 Note that the results in the publication were generated using the jpeg trainset to allow for fair comparison to the JPEG Pleno PCC coding solution.
 
@@ -138,8 +139,8 @@ Download the **JPEG Pleno PCC CTTC Point Clouds** dataset and the **8i Voxelized
 Unpack all point clouds, and put them into data/datasets/8iVFBv2 and data/datasets/jpeg_testset. 
 
 Then re-run the evaluation using 
-```python3
-    python evaluate.py
+```
+python evaluate.py
 ```
 
 
