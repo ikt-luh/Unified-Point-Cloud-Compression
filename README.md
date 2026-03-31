@@ -125,16 +125,14 @@ Datasets are specified in a config file (pointcloud and frames), a dataset confi
 We provide a configuration in ./configs for training our model.
 
 ```
-python train.py --config=./configs/Ours.yaml
+python train.py --config=./configs/Main.yaml
 ```
 
 Training takes roughly 1-2 days on an NVIDIA RTX 4090. 
 
 
 ### Results
-Use the weights from here []() to rerun the evaluation with our dataset.
-
-You can get the test data from [https://plenodb.jpeg.org/](https://plenodb.jpeg.org/).
+Use the weights from [here](https://github.com/ikt-luh/Unified-Point-Cloud-Compression/releases/tag/Main) to rerun the evaluation.
 Download the **JPEG Pleno PCC CTTC Point Clouds** dataset and the **8i Voxelized Full Bodies** dataset.
 Unpack all point clouds, and put them into data/datasets/8iVFBv2 and data/datasets/jpeg_testset. 
 
