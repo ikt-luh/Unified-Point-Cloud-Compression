@@ -14,27 +14,26 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
 torch.manual_seed(0)
 torch.use_deterministic_algorithms(True)
 
-# --- CONFIG ---
+# Config
 device_id = 0
 base_path = "./results"
 sequence = "soldier"
 ref_path = f"./data/datasets/8iVFB/{sequence}_vox10_0690.ply"
 N = 30  # Number of repetitions per setting
 
-# --- SETUP ---
 device = torch.device(device_id)
 torch.cuda.set_device(device)
 torch.manual_seed(0)
 torch.use_deterministic_algorithms(True)
 torch.autograd.set_grad_enabled(False)
 
-# --- Load point cloud ---
+# PC Loading
 pcd = o3d.io.read_point_cloud(ref_path)
 points = torch.from_numpy(np.asarray(pcd.points)).unsqueeze(0).float()
 colors = torch.from_numpy(np.asarray(pcd.colors)).unsqueeze(0).float()
 data = {"src": {"points": points, "colors": colors}}
 
-# --- Experiments ---
+#  Experiments
 experiments = [
     "Main",
     "G-PCC",
@@ -42,7 +41,7 @@ experiments = [
     "V-PCC"
 ]
 
-# --- Time measurements ---
+#  Time measurements
 date_str = datetime.now().strftime("%Y-%m-%d")
 all_results = []
 
@@ -96,7 +95,6 @@ for experiment in experiments:
                 if scale != 1 and 1 in use_sr:
                     exp_list.append({"model": model, "scale": scale, "SR": True})
 
-    # --- Run timing ---
     print(exp_list)
     for idx, sett in enumerate(exp_list):
         print(idx, sett)
@@ -134,7 +132,7 @@ for experiment in experiments:
             print(f"[{experiment}] idx:{idx} rep:{rep} "
                   f" t_comp:{t_compress:.2f}s t_decomp:{t_decompress:.2f}s")
 
-# --- Save to CSV ---
+# Save to CSV
 df = pd.DataFrame(all_results)
 out_path = f"time_measurements_{sequence}_{date_str}.csv"
 df.to_csv(out_path, index=False)

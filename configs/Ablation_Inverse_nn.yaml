@@ -46,7 +46,7 @@ q_map:
   mode: "quadratic"
 
 ## Training
-device: "2"
+device: "0"
 epochs: 600
 batch_size: 8
 virtual_batches: false

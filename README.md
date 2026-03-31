@@ -13,6 +13,21 @@
 
 ## Overview
 
+
+## Data 
+### Testset
+Download the [JPEG Pleno CPCC CTTC Point Clouds](https://plenodb.jpeg.org/pc/JPEG_Pleno_PCC_CTTC.zip) dataset and place the *.ply files it under [./data/datasets/jpeg_testset](./data/datasets/jpeg_testset)
+
+### Training Dataset
+The training set is manually collected from various sources. For reconstructring the dataset, collect the point clouds listed in [./data/datasets/jpeg_128/config.yaml](./data/datasets/jpeg_128/config.yaml) into [./data/datasets/jpeg_testset](./data/datasets/jpeg_testset).
+
+Alternatively, ready-made scripts for a easily available training routine on the UVG Point Cloud dataset are available. 
+```
+    # TODO: How to run
+```
+Note that the results in the publication were generated using the jpeg trainset to allow for fair comparison to the JPEG Pleno PCC coding solution.
+
+
 ## Usage
 We used Python 3.10.12 for our experiments.
 
@@ -36,8 +51,7 @@ sed -i '1 i\#include <thrust/execution_policy.h>' src/3rdparty/concurrent_unorde
 python setup.py install --force_cuda --blas=openblas
 ```
 
-
-# Open3D
+### Open3D
 ```
 git clone https://github.com/isl-org/Open3D
 cd Open3D
@@ -58,7 +72,7 @@ make -j$(nproc)
 make install-pip-package
 ```
 
-# PCQM
+### PCQM
 ```
 git clone https://github.com/MEPP-team/PCQM.git
 mkdir PCQM/build && cd PCQM/build
@@ -66,7 +80,7 @@ cmake ..
 make
 ```
 
-# G-PCC
+### G-PCC
 ```
 git clone https://github.com/MPEGGroup/mpeg-pcc-tmc13.git
 cd mpeg-pcc-tmc13
@@ -75,20 +89,20 @@ cmake ..
 make
 ```
 
-# V-PCC
+### V-PCC (optional, for related work comparison)
 You will have to build with VTM Lib video codec (Hacky Solution: Set USE_VTMLIB_VIDEO_CODEC to true in CMakeLists.txt before building)
 ```
 git clone https://github.com/MPEGGroup/mpeg-pcc-tmc2.git --branch release-v24.0
 cd mpeg-pcc-tmc2 && ./build.sh
 ```
 
-# IT-DL-PCC
+### IT-DL-PCC (optional, for related work comparison)
 ```
 git clone https://github.com/aguarda/IT-DL-PCC.git
 ```
 Download the weights from https://github.com/aguarda/IT-DL-PCC.git and place the unzipped repository in ./dependencies/IT-DL-PCC
 
-### Metrics
+### Metrics (optional, for related work comparison)
 If you have access to the mpeg-pcc-dmetric repositry, install and compile it into the dependencies folder.
 The results in the paper where computed using aformentioned repository.
 We supply a simplified python metric implementation as fallback solution to compute the metrics. 
@@ -130,9 +144,6 @@ Then re-run the evaluation using
 ```python3
     python evaluate.py
 ```
-
-
-
 
 
 ## Citation
