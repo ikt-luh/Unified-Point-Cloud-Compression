@@ -14,7 +14,7 @@ Essentially, we provide a method for training a learning-based compression model
 Download the [JPEG Pleno CPCC CTTC Point Clouds](https://plenodb.jpeg.org/pc/JPEG_Pleno_PCC_CTTC.zip) dataset and place the *.ply files under _./data/datasets/jpeg_testset/_
 
 ### Training Dataset
-The training set is manually collected from various sources. For reconstructring the dataset, collect the point clouds listed in _./data/datasets/jpeg_128/config.yaml_ into _./data/datasets/jpeg_testset](./data/datasets/jpeg_trainset_
+The training set is manually collected from various sources. For reconstructring the dataset, collect the point clouds listed in _./data/datasets/jpeg_128/config.yaml_ into _./data/datasets/jpeg_trainset_
 
 Alternatively, ready-made scripts for a easily available training routine on the UVG Point Cloud dataset are available. 
 ```
@@ -105,20 +105,6 @@ If you have access to the mpeg-pcc-dmetric repositry, install and compile it int
 The results in the paper where computed using aformentioned repository.
 We supply a simplified python metric implementation as fallback solution to compute the metrics. 
 The evaluation script checks for the mpeg implementation and resorts to fallback if it is not in the dependencies folder.
-
-### Preparing the Dataset
-We use the [8iVFBv2](http://plenodb.jpeg.org/pc/8ilabs) and the [Owlii](https://plenodb.jpeg.org/pc/microsoft) dataset for testing. 
-The test sequences with normals are contained in the GitHub repository.
-
-For training, we sample point clouds from [UVG-VPC](https://ultravideo.fi/UVG-VPC/)
-To download the UVG-VPC dataset automatically, run
-```
-cd data
-python download_raw_pointclouds.py 
-```
-
-(This downloads raw data for all 3 datasets, so it will fill up your disk)
-Datasets are specified in a config file (pointcloud and frames), a dataset configuration can be found in ./data/datasets/full_128.
 
 
 ### Training
