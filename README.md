@@ -1,4 +1,4 @@
-# Title 
+ 
 
 This repository contains code for the paper [Unified Compression of Point Cloud Geometry and Attributes through Variable-Rate Conditioning]() presented at the ACM MMSys'26 Conference.
 
