@@ -1,6 +1,6 @@
  
 
-This repository contains code for the paper [Unified Compression of Point Cloud Geometry and Attributes through Variable-Rate Conditioning]() presented at the ACM MMSys'26 Conference.
+This repository contains code for the paper [Unified Compression of Point Cloud Geometry and Attributes through Variable-Rate Conditioning](https://dl.acm.org/doi/10.1145/3793853.3795742) presented at the ACM MMSys'26 Conference.
 
 Essentially, we provide a method for training a learning-based compression model with a single encoder and decoder which allows to adaptively control the geometry and attribute quality and thus coding rate during inference.
 
